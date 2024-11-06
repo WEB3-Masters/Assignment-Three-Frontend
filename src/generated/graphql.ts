@@ -198,6 +198,13 @@ export type GetRoomsQueryVariables = Exact<{ [key: string]: never; }>;
 
 export type GetRoomsQuery = { __typename?: 'Query', rooms: Array<{ __typename?: 'Room', id: any, roomState?: RoomState | null, players?: Array<{ __typename?: 'Player', id: any, username: string }> | null, currentPlayer?: { __typename?: 'Player', id: any, username: string } | null }> };
 
+export type RoomUpdatedSubscriptionVariables = Exact<{
+  roomId: Scalars['UUID']['input'];
+}>;
+
+
+export type RoomUpdatedSubscription = { __typename?: 'Subscription', roomUpdated: { __typename?: 'Room', id: any, roomState?: RoomState | null, players?: Array<{ __typename?: 'Player', id: any, username: string }> | null, currentPlayer?: { __typename?: 'Player', id: any, username: string } | null, deck?: { __typename?: 'Deck', cards: Array<{ __typename?: 'Card', id: any, type: CardType, color?: CardColor | null, number?: number | null }> } | null, discardPile?: { __typename?: 'Deck', cards: Array<{ __typename?: 'Card', id: any, type: CardType, color?: CardColor | null, number?: number | null }> } | null } };
+
 
 export const LoginPlayerDocument = gql`
     mutation LoginPlayer($username: String!, $password: String!) {
@@ -325,3 +332,55 @@ export function useGetRoomsLazyQuery(options: VueApolloComposable.UseQueryOption
   return VueApolloComposable.useLazyQuery<GetRoomsQuery, GetRoomsQueryVariables>(GetRoomsDocument, {}, options);
 }
 export type GetRoomsQueryCompositionFunctionResult = VueApolloComposable.UseQueryReturn<GetRoomsQuery, GetRoomsQueryVariables>;
+export const RoomUpdatedDocument = gql`
+    subscription RoomUpdated($roomId: UUID!) {
+  roomUpdated(roomId: $roomId) {
+    id
+    roomState
+    players {
+      id
+      username
+    }
+    currentPlayer {
+      id
+      username
+    }
+    deck {
+      cards {
+        id
+        type
+        color
+        number
+      }
+    }
+    discardPile {
+      cards {
+        id
+        type
+        color
+        number
+      }
+    }
+  }
+}
+    `;
+
+/**
+ * __useRoomUpdatedSubscription__
+ *
+ * To run a query within a Vue component, call `useRoomUpdatedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useRoomUpdatedSubscription` returns an object from Apollo Client that contains result, loading and error properties
+ * you can use to render your UI.
+ *
+ * @param variables that will be passed into the subscription
+ * @param options that will be passed into the subscription, supported options are listed on: https://v4.apollo.vuejs.org/guide-composable/subscription.html#options;
+ *
+ * @example
+ * const { result, loading, error } = useRoomUpdatedSubscription({
+ *   roomId: // value for 'roomId'
+ * });
+ */
+export function useRoomUpdatedSubscription(variables: RoomUpdatedSubscriptionVariables | VueCompositionApi.Ref<RoomUpdatedSubscriptionVariables> | ReactiveFunction<RoomUpdatedSubscriptionVariables>, options: VueApolloComposable.UseSubscriptionOptions<RoomUpdatedSubscription, RoomUpdatedSubscriptionVariables> | VueCompositionApi.Ref<VueApolloComposable.UseSubscriptionOptions<RoomUpdatedSubscription, RoomUpdatedSubscriptionVariables>> | ReactiveFunction<VueApolloComposable.UseSubscriptionOptions<RoomUpdatedSubscription, RoomUpdatedSubscriptionVariables>> = {}) {
+  return VueApolloComposable.useSubscription<RoomUpdatedSubscription, RoomUpdatedSubscriptionVariables>(RoomUpdatedDocument, variables, options);
+}
+export type RoomUpdatedSubscriptionCompositionFunctionResult = VueApolloComposable.UseSubscriptionReturn<RoomUpdatedSubscription, RoomUpdatedSubscriptionVariables>;

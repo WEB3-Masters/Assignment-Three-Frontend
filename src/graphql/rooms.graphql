@@ -12,3 +12,34 @@ query GetRooms {
     }
   }
 } 
+
+subscription RoomUpdated($roomId: UUID!) {
+  roomUpdated(roomId: $roomId) {
+    id
+    roomState
+    players {
+      id
+      username
+    }
+    currentPlayer {
+      id
+      username
+    }
+    deck {
+      cards {
+        id
+        type
+        color
+        number
+      }
+    }
+    discardPile {
+      cards {
+        id
+        type
+        color
+        number
+      }
+    }
+  }
+} 
