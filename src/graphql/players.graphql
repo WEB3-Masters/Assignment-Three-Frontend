@@ -1,0 +1,7 @@
+
+query GetPlayer($id: UUID!) {
+    player(id: $id) {
+        id
+        username
+    }
+}

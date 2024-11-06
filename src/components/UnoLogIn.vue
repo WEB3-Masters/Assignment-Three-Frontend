@@ -9,28 +9,64 @@
                 <div class="field">
                     <div class="textinput">
                         <label for="username-signin">Username</label>
-                        <input id="username-signin" type="text" placeholder="Enter your username" />
+                        <input 
+                            id="username-signin" 
+                            v-model="signupUsername"
+                            type="text" 
+                            placeholder="Enter your username" 
+                        />
                     </div>
                     <div class="textinput">
                         <label for="password-signin">Password</label>
-                        <input id="password-signin" type="password" placeholder="Enter your password" />
+                        <input 
+                            id="password-signin" 
+                            v-model="signupPassword"
+                            type="password" 
+                            placeholder="Enter your password" 
+                        />
                     </div>
                     <div class="btn">
-                        <button @click="signUp">Sign up</button>
+                        <button 
+                            @click="signUp"
+                            :disabled="registerLoading"
+                        >
+                            {{ registerLoading ? 'Signing up...' : 'Sign up' }}
+                        </button>
+                    </div>
+                    <div v-if="registerError" class="error-message">
+                        {{ registerError.message }}
                     </div>
                 </div>
                 <div></div>
                 <div class="field">
                     <div class="textinput">
                         <label for="username-login">Username</label>
-                        <input id="username-login" type="text" placeholder="Enter your username" />
+                        <input 
+                            id="username-login" 
+                            v-model="loginUsername"
+                            type="text" 
+                            placeholder="Enter your username" 
+                        />
                     </div>
                     <div class="textinput">
                         <label for="password-login">Password</label>
-                        <input id="password-login" type="password" placeholder="Enter your password" />
+                        <input 
+                            id="password-login" 
+                            v-model="loginPassword"
+                            type="password" 
+                            placeholder="Enter your password" 
+                        />
                     </div>
                     <div class="btn">
-                        <button @click="logIn">Log in</button>
+                        <button 
+                            @click="logIn"
+                            :disabled="loginLoading"
+                        >
+                            {{ loginLoading ? 'Logging in...' : 'Log in' }}
+                        </button>
+                    </div>
+                    <div v-if="loginError" class="error-message">
+                        {{ loginError.message }}
                     </div>
                 </div>
             </div>
@@ -41,16 +77,60 @@
 <script setup>
 import { useGameStore } from '../stores/GameStore';
 import { useRouter } from 'vue-router';
+import { ref } from 'vue';
+import { useLoginPlayerMutation, useRegisterPlayerMutation } from '../generated/graphql';
 
 const router = useRouter();
 const store = useGameStore();
 
-function logIn() {
-    router.push("/setup");
+// Add refs for form inputs
+const loginUsername = ref('');
+const loginPassword = ref('');
+const signupUsername = ref('');
+const signupPassword = ref('');
+
+// Add mutations
+const { mutate: loginPlayer, loading: loginLoading, error: loginError } = useLoginPlayerMutation();
+const { mutate: registerPlayer, loading: registerLoading, error: registerError } = useRegisterPlayerMutation();
+
+async function logIn() {
+    try {
+        const response = await loginPlayer({
+            username: loginUsername.value,
+            password: loginPassword.value
+        });
+        
+        if (response?.data?.loginPlayer) {
+            localStorage.setItem('token', response.data.loginPlayer);
+            router.push("/setup");
+        }
+    } catch (error) {
+        console.error('Login failed:', error);
+    }
 }
 
-function signUp() {
-    router.push("/setup");
+async function signUp() {
+    try {
+        const response = await registerPlayer({
+            username: signupUsername.value,
+            password: signupPassword.value
+        });
+        
+        if (response?.data?.registerPlayer) {
+            // After successful registration, attempt to log in
+            const loginResponse = await loginPlayer({
+                username: signupUsername.value,
+                password: signupPassword.value
+            });
+            
+            if (loginResponse?.data?.loginPlayer) {
+                localStorage.setItem('token', loginResponse.data.loginPlayer);
+                router.push("/setup");
+            }
+        }
+    } catch (error) {
+        console.error('Registration failed:', error);
+    }
 }
 </script>
 
@@ -143,5 +223,13 @@ h1 {
 
 .btn button:active {
     background-color: #1a8bb1; /* Even darker on click */
+}
+
+/* Add new styles */
+.error-message {
+    color: #ff4444;
+    margin-top: 10px;
+    text-align: center;
+    font-size: 14px;
 }
 </style>
