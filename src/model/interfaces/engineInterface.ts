@@ -1,12 +1,10 @@
 import type { Card, CardColor, Deck } from "../deck";
 import type { UnoFailure } from "../hand";
 import type { Ref } from "vue";
-
 export type Player = {
 	index: number;
 	name: string;
 };
-
 export interface EngineInterface {
 	createGame(bots: ("easy" | "medium" | "hard")[]): Array<Player>;
 	getPlayerName(index: number): string | undefined;
