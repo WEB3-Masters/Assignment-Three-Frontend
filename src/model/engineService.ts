@@ -3,106 +3,233 @@ import type { Deck, CardColor, Card } from "./deck";
 import type { UnoFailure } from "./hand";
 import type { EngineInterface, Player } from "./interfaces/engineInterface";
 import { createUnoGame, type Game } from "../model/uno";
-import { decideMove } from "./BotAI";
+import { graphqlRequest } from "../clients/graphqlClient"; // Assume graphqlRequest is an async function for making requests
 
-export class EngineService implements EngineInterface {
-	game: Game = createUnoGame({ players: ["a", "b"] });
-	discardPileTopCardRef = ref<Card | undefined>();
-	bots: ("easy" | "medium" | "hard")[] = [];
-	public onEnd: () => void = () => {};
+export class EngineService  {
+  game: Game = createUnoGame({ players: ["a", "b"] });
+  discardPileTopCardRef = ref<Card | undefined>();
+  bots: ("easy" | "medium" | "hard")[] = [];
+  public onEnd: () => void = () => {};
 
-	createGame(bots: ("easy" | "medium" | "hard")[]): Array<Player> {
-		const players = Array.from({ length: bots.length + 1 }, (_, index) => {
-			if (index === 0) return "player";
-			return `bot ${index}`;
-		});
-		this.bots = bots;
+  async createGame(bots: ("easy" | "medium" | "hard")[]): Promise<Array<Player>> {
+    const players = Array.from({ length: bots.length + 1 }, (_, index) => {
+      if (index === 0) return "player";
+      return `bot${index}`;
+    });
+    this.bots = bots;
 
-		this.game = createUnoGame({ players, targetScore: 500, cardsPerPlayer: 7 });
+    const response = await graphqlRequest({
+      query: `
+        mutation createRoom($hostId: String!) {
+          createRoom(hostId: $hostId) {
+            id
+            players {
+              id
+              username
+            }
+          }
+        }
+      `,
+      variables: { hostId: this.getHostId() },
+    });
 
-		this.game.onGameEnd = (winner: number) => {
-			Array.from({ length: this.game.hand?.playerCount ?? 0 }).forEach((_, index) => {
-				if (this.game.score(index) >= this.game.targetScore) {
-					alert(`${this.game.player(index)} has won the game!`);
-					this.onEnd();
-					return;
-				}
-			});
+    const room = response.data.createRoom;
+    this.game = createUnoGame({ players: room.players.map((p: Player) => p.username), targetScore: 500, cardsPerPlayer: 7 });
 
-			alert(`Round has ended, winner is ${this.game.player(winner)}!`);
-		};
+    this.game.onGameEnd = async (winner: number) => {
+      const playersWithScores = await Promise.all(
+        Array.from({ length: this.game.hand?.playerCount ?? 0 }).map(async (_, index) => {
+          const score = await this.getPlayerScore(index);
+          return { player: this.game.player(index), score };
+        })
+      );
 
-		this.discardPileTopCardRef.value = this.game.hand?.discardPile().top();
-		return players.map((player, index) => {
-			return { name: player, index };
-		});
-	}
+      playersWithScores.forEach(({ player, score }) => {
+        if (score && score >= this.game.targetScore) {
+          alert(`${player} has won the game!`);
+          this.onEnd();
+        }
+      });
+      alert(`Round has ended, winner is ${this.game.player(winner)}!`);
+    };
 
-	getPlayerName(index: number): string | undefined {
-		return this.game.player(index);
-	}
+    this.discardPileTopCardRef.value = this.game.hand?.discardPile().top();
+    return room.players.map((player: Player, index: number) => {
+      return { name: player.username, index };
+    });
+  }
 
-	getPlayerScore(index: number): number | undefined {
-		return this.game.score(index);
-	}
+  async getPlayerName(index: number): Promise<string | undefined> {
+    const response = await graphqlRequest({
+      query: `
+        query getPlayer($id: String!) {
+          player(id: $id) {
+            username
+          }
+        }
+      `,
+      variables: { id: this.game.playerId(index) },
+    });
+    return response.data.player?.username;
+  }
 
-	getPlayerDeck(index: number): Card[] | undefined {
-		return [...(this.game.hand?.playerHand(index) ?? [])];
-	}
+  async getPlayerScore(index: number): Promise<number | undefined> {
+    const response = await graphqlRequest({
+      query: `
+        query getRoomScore($roomId: String!) {
+          room(id: $roomId) {
+            players {
+              id
+              score
+            }
+          }
+        }
+      `,
+      variables: { roomId: this.getRoomId() },
+    });
+    return response.data.room?.players[index]?.score;
+  }
 
-	getCurrentPlayer(): Player {
-		const playerIndex = this.game.hand?.playerInTurn() ?? -1;
-		return { name: this.game.hand?.player(playerIndex) ?? "", index: playerIndex };
-	}
+  async getPlayerDeck(index: number): Promise<Card[] | undefined> {
+    const response = await graphqlRequest({
+      query: `
+        query getRoomHands($roomId: String!) {
+          room(id: $roomId) {
+            hands {
+              playerId
+              cards {
+                id
+                type
+                color
+                number
+              }
+            }
+          }
+        }
+      `,
+      variables: { roomId: this.getRoomId() },
+    });
+    const hand = response.data.room.hands.find((hand: any) => hand.playerId === this.game.playerId(index));
+    return hand ? hand.cards : undefined;
+  }
 
-	play(cardIndex: number, nextColor?: CardColor): Card | undefined {
-		const card = this.game.hand?.play(cardIndex, nextColor);
-		if(card?.type === 'WILD' || card?.type === 'WILD DRAW')
-		{
-			if(!nextColor) throw new Error("Wild card needs a color");
-			card.color = nextColor;
-		}
-		this.discardPileTopCardRef.value = this.game.hand?.discardPile().top();
-		return card;
-	}
+  async getCurrentPlayer(): Promise<Player> {
+    const response = await graphqlRequest({
+      query: `
+        query getCurrentHand($roomId: String!) {
+          room(id: $roomId) {
+            currentHand {
+              playerId
+            }
+          }
+        }
+      `,
+      variables: { roomId: this.getRoomId() },
+    });
+    const playerId = response.data.room.currentHand?.playerId;
+    return { name: await this.getPlayerName(this.getPlayerIndex(playerId)), index: this.getPlayerIndex(playerId) };
+  }
 
-	canPlay(cardIndex: number): boolean | undefined {
-		return this.game.hand?.canPlay(cardIndex);
-	}
+  async play(cardIndex: number, nextColor?: CardColor): Promise<Card | undefined> {
+    const response = await graphqlRequest({
+      query: `
+        mutation playCard($roomId: String!, $cardIndex: Int!, $nextColor: String) {
+          playCard(roomId: $roomId, cardIndex: $cardIndex, nextColor: $nextColor) {
+            id
+            type
+            color
+          }
+        }
+      `,
+      variables: {
+        roomId: this.getRoomId(),
+        cardIndex,
+        nextColor: nextColor ?? null,
+      },
+    });
+    const card = response.data.playCard;
+    this.discardPileTopCardRef.value = card;
+    return card;
+  }
 
-	decideMove(): void {
-		const hand = this.game.hand;
-		if (!hand) return;
+  async draw(): Promise<void> {
+    await graphqlRequest({
+      query: `
+        mutation drawCard($roomId: String!) {
+          drawCard(roomId: $roomId)
+        }
+      `,
+      variables: { roomId: this.getRoomId() },
+    });
+  }
 
-		const move = decideMove(hand, this.bots[(this.game.hand?.playerInTurn() ?? 0) - 1]);
+  async sayUno(index: number): Promise<void> {
+    await graphqlRequest({
+      query: `
+        mutation sayUno($roomId: String!, $playerId: String!) {
+          sayUno(roomId: $roomId, playerId: $playerId)
+        }
+      `,
+      variables: { roomId: this.getRoomId(), playerId: this.game.playerId(index) },
+    });
+  }
 
-		if (move === "draw") {
-			this.game.hand?.draw();
-			return;
-		}
+  async catchUnoFailure(unoFailure: UnoFailure): Promise<boolean> {
+    const response = await graphqlRequest({
+      query: `
+        mutation catchUnoFailure($roomId: String!, $unoFailure: UnoFailureInput!) {
+          catchUnoFailure(roomId: $roomId, unoFailure: $unoFailure)
+        }
+      `,
+      variables: { roomId: this.getRoomId(), unoFailure },
+    });
+    return response.data.catchUnoFailure;
+  }
 
-		if (move.nextColor) alert("Next Color is: " + move.nextColor);
-		this.play(move.cardIndex, move.nextColor);
-	}
+  async getTargetScore(): Promise<number> {
+    const response = await graphqlRequest({
+      query: `
+        query getTargetScore($roomId: String!) {
+          room(id: $roomId) {
+            targetScore
+          }
+        }
+      `,
+      variables: { roomId: this.getRoomId() },
+    });
+    return response.data.room.targetScore;
+  }
 
-	draw(): void {
-		this.game.hand?.draw();
-		if (!this.game.hand?.canPlayAny()) this.game.hand?.nextPlayer();
-	}
+  async getDiscardPileTopCard(): Promise<Ref<Card | undefined>> {
+    const response = await graphqlRequest({
+      query: `
+        query getDiscardPileTopCard($roomId: String!) {
+          room(id: $roomId) {
+            discardPile {
+              top {
+                id
+                type
+                color
+              }
+            }
+          }
+        }
+      `,
+      variables: { roomId: this.getRoomId() },
+    });
+    this.discardPileTopCardRef.value = response.data.room.discardPile.top;
+    return this.discardPileTopCardRef;
+  }
 
-	sayUno(index: number): void {
-		this.game.hand?.sayUno(index);
-	}
+  private getRoomId(): string {
+    // Your logic to get the current room ID
+  }
 
-	catchUnoFailure(unoFailure: UnoFailure): boolean {
-		return this.game.hand?.catchUnoFailure(unoFailure) ?? false;
-	}
+  private getHostId(): string {
+    // Your logic to get the current host ID
+  }
 
-	getTargetScore(): number {
-		return this.game.targetScore;
-	}
-
-	get getDiscardPileTopCard(): Ref<Card | undefined, Card | undefined> {
-		return this.discardPileTopCardRef;
-	}
+  private getPlayerIndex(playerId: string): number {
+    // Your logic to get the player index based on playerId
+  }
 }

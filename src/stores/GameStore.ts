@@ -2,172 +2,160 @@ import type { Difficulty } from "../model/BotAI";
 import type { Card, CardColor } from "../model/deck";
 import { EngineService } from "../model/engineService";
 import type { UnoFailure } from "../model/hand";
-import type { EngineInterface, Player } from "../model/interfaces/engineInterface";
+import type { Player } from "../model/interfaces/engineInterface";
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
 
 export const useGameStore = defineStore("game", () => {
-	const players = ref<(Player & { isBot: boolean; deck: Card[]; difficulty?: Difficulty })[]>([]);
-	const bots = computed(() => players.value.filter((player) => player.isBot));
-	const engineService: EngineService = new EngineService();
-	const currentPlayerIndex = ref(0);
-	const router = useRouter();
+  const players = ref<(Player & { isBot: boolean; deck: Card[]; difficulty?: Difficulty })[]>([]);
+  const bots = computed(() => players.value.filter((player) => player.isBot));
+  const engineService = new EngineService();
+  const currentPlayerIndex = ref(0);
+  const router = useRouter();
 
-	function createGame(bots: ("easy" | "medium" | "hard")[]) {
-		const _players = engineService.createGame(bots);
+  async function createGame(bots: ("easy" | "medium" | "hard")[]) {
+    const _players = await engineService.createGame(bots);
+    
+    players.value = _players.map((player, index) => {
+      const isBot = player.name.includes("bot");
+      const difficulty = isBot ? bots[index - 1] : undefined;
+      return {
+        ...player,
+        isBot,
+        deck: [],
+        difficulty,
+      };
+    });
+    
+    await updateAllPlayerDecks();
+    engineService.onEnd = endGame;
+    nextTurn();
+  }
 
-		players.value = _players.map((player, index) => {
-			const isBot = player.name.includes("bot");
-			const difficulty = isBot ? bots[index - 1] : undefined;
-			return {
-				...player,
-				isBot,
-				deck: engineService.getPlayerDeck(player.index) ?? [],
-				difficulty,
-			};
-		});
-		engineService.onEnd = () => {
-			const query: Record<string, string | number> = {};
+  async function endGame() {
+    const query: Record<string, string | number> = {};
+    await Promise.all(players.value.map(async (player) => {
+      const score = await engineService.getPlayerScore(player.index);
+      query[player.name] = score ?? 0;
+    }));
+    router.push({ path: "/over", query });
+  }
 
-			players.value.forEach((player) => {
-				const name = player.name;
-				const score = engineService.getPlayerScore(player.index);
-				query[name] = score ?? 0;
-			});
-			router.push({ path: "/over", query });
-		};
-		nextTurn();
-	}
+  async function play(cardIndex: number, nextColor?: CardColor) {
+    try {
+      await engineService.play(cardIndex, nextColor);
+      await updateAllPlayerDecks();
+      nextTurn();
+    } catch {
+      alert("Illegal card play");
+    }
+  }
 
-	function play(cardIndex: number, nextColor?: CardColor) {
-		try {
-			engineService.play(cardIndex, nextColor);
-			updateAllPlayerDecks();
-			nextTurn();
-		} catch {
-			alert("Illegal card play");
-		}
-	}
+  async function draw() {
+    await engineService.draw();
+    await updateAllPlayerDecks();
+    nextTurn();
+  }
 
-	function canPlay(cardIndex: number) {
-		return engineService.canPlay(cardIndex);
-	}
+  function isPlayerInTurn(index: number): boolean {
+    return index === currentPlayerIndex.value;
+  }
 
-	function draw() {
-		engineService.draw();
-		updateAllPlayerDecks();
-		nextTurn();
-	}
+  function currentPlayerInTurn(): number {
+    return currentPlayerIndex.value;
+  }
 
-	function getPlayerScore(index: number): number {
-		return engineService.getPlayerScore(index) ?? 0;
-	}
+  async function sayUno(index: number) {
+    await engineService.sayUno(index);
+    await updateAllPlayerDecks();
+  }
 
-	function isPlayerInTurn(index: number): boolean {
-		return index === currentPlayerIndex.value;
-	}
+  async function catchUnoFailure(unoFailure: UnoFailure) {
+    const caught = await engineService.catchUnoFailure(unoFailure);
+    if (caught) {
+      alert(`Failure caught successfully!`);
+      await updateAllPlayerDecks();
+    }
+  }
 
-	function currentPlayerInTurn(): number {
-		return currentPlayerIndex.value+1;
-	}
+  async function nextTurn() {
+    const currentPlayer = await engineService.getCurrentPlayer();
+    currentPlayerIndex.value = currentPlayer.index;
 
+    checkForUnoFailure().then(async () => {
+      if (currentPlayer?.isBot) {
+        await makeBotMove();
+      }
+    });
+  }
 
-	function sayUno(index: number) {
-		engineService.sayUno(index);
-		updateAllPlayerDecks();
-	}
+  async function makeBotMove() {
+    setTimeout(async () => {
+      await engineService.decideMove();
+      await updateAllPlayerDecks();
+      nextTurn();
+    }, 2500);
+  }
 
-	function catchUnoFailure(unoFailure: UnoFailure) {
-		engineService.catchUnoFailure(unoFailure);
-	}
+  async function checkForUnoFailure() {
+    const delayBetweenChecks = 500;
+    for (const bot of players.value) {
+      if (!bot.isBot) continue;
 
-	function getTargetScore() {
-		return engineService.getTargetScore();
-	}
+      for (const otherPlayer of players.value) {
+        if (bot === otherPlayer || otherPlayer.deck.length !== 1) continue;
 
-	function makeBotMove() {
-		setTimeout(() => {
-			engineService.decideMove();
-			updateAllPlayerDecks();
-			nextTurn();
-		}, 2500);
-	}
+        let catchProbability = 0;
+        let delay = 0;
 
-	function nextTurn() {
-		currentPlayerIndex.value = engineService.getCurrentPlayer().index;
-		const currentPlayer = players.value[currentPlayerIndex.value];
+        switch (bot.difficulty) {
+          case "easy":
+            catchProbability = 0.2;
+            delay = Math.random() * 2000 + 2000;
+            break;
+          case "medium":
+            catchProbability = 0.5;
+            delay = Math.random() * 1500 + 1000;
+            break;
+          case "hard":
+            catchProbability = 0.8;
+            delay = Math.random() * 1000 + 500;
+            break;
+        }
 
-		checkForUnoFailure().then(() => {
-			if (currentPlayer?.isBot) {
-				makeBotMove();
-			}
-		});
-	}
+        if (Math.random() < catchProbability) {
+          await new Promise(resolve => setTimeout(resolve, delay));
+          const isCaught = await engineService.catchUnoFailure({ accused: otherPlayer.index, accuser: bot.index });
+          if (isCaught) {
+            alert(`Bot ${bot.index} caught ${otherPlayer.name} for not saying Uno!`);
+            await updateAllPlayerDecks();
+          }
+        }
+      }
 
-	async function checkForUnoFailure() {
-		const delayBetweenChecks = 500;
-		for (const bot of players.value) {
-			if (!bot.isBot) continue;
+      await new Promise(resolve => setTimeout(resolve, delayBetweenChecks));
+    }
+  }
 
-			for (const otherPlayer of players.value) {
-				if (bot === otherPlayer || otherPlayer.deck.length !== 1) continue;
+  async function updateAllPlayerDecks() {
+    await Promise.all(players.value.map(async (player) => {
+      player.deck = await engineService.getPlayerDeck(player.index) ?? [];
+    }));
+  }
 
-				let catchProbability = 0;
-				let delay = 0;
-
-				switch (bot.difficulty) {
-					case "easy":
-						catchProbability = 0.2; // 20% chance to catch failure
-						delay = Math.random() * 2000 + 2000; // 2 to 4 seconds delay
-						break;
-
-					case "medium":
-						catchProbability = 0.5; // 50% chance to catch failure
-						delay = Math.random() * 1500 + 1000; // 1 to 2.5 seconds delay
-						break;
-
-					case "hard":
-						catchProbability = 0.8; // 80% chance to catch failure
-						delay = Math.random() * 1000 + 500; // 0.5 to 1.5 seconds delay
-						break;
-				}
-
-				if (Math.random() < catchProbability) {
-					await new Promise((resolve) => setTimeout(resolve, delay));
-					const isCaught = engineService.catchUnoFailure({ accused: otherPlayer.index, accuser: bot.index });
-					if (isCaught) {
-						alert(`Bot ${bot.index} caught ${otherPlayer.name} ${otherPlayer.index} for not saying Uno!`);
-						updateAllPlayerDecks();
-					}
-				}
-			}
-
-			// Introduce a small delay between bots checking to simulate realistic behavior
-			await new Promise((resolve) => setTimeout(resolve, delayBetweenChecks));
-		}
-	}
-
-	function updateAllPlayerDecks() {
-		players.value.forEach((player) => {
-			player.deck = engineService.getPlayerDeck(player.index) ?? [];
-		});
-	}
-
-	return {
-		createGame,
-		getPlayerScore,
-		isPlayerInTurn,
-		currentPlayerInTurn,
-		play,
-		canPlay,
-		draw,
-		sayUno,
-		catchUnoFailure,
-		updateAllPlayerDecks,
-		getTargetScore,
-		discardPileTopCard: engineService.getDiscardPileTopCard,
-		players,
-		bots,
-	};
+  return {
+    createGame,
+    play,
+    draw,
+    sayUno,
+    catchUnoFailure,
+    isPlayerInTurn,
+    currentPlayerInTurn,
+    updateAllPlayerDecks,
+    nextTurn,
+    get players() {
+      return players.value;
+    },
+  };
 });
