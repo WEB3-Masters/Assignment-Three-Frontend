@@ -11,7 +11,7 @@
             <div v-else class="rooms">
                 <div v-for="room in rooms" :key="room.id" class="room-card">
                     <div class="room-info">
-                        <span class="room-status" :class="room.roomState.toLowerCase()">
+                        <span class="room-status" :class="room.roomState?.toLowerCase()">
                             {{ room.roomState }}
                         </span>
                         <div class="players">
