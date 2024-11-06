@@ -193,6 +193,11 @@ export type GetPlayerQueryVariables = Exact<{
 
 export type GetPlayerQuery = { __typename?: 'Query', player?: { __typename?: 'Player', id: any, username: string } | null };
 
+export type GetRoomsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type GetRoomsQuery = { __typename?: 'Query', rooms: Array<{ __typename?: 'Room', id: any, roomState?: RoomState | null, players?: Array<{ __typename?: 'Player', id: any, username: string }> | null, currentPlayer?: { __typename?: 'Player', id: any, username: string } | null }> };
+
 
 export const LoginPlayerDocument = gql`
     mutation LoginPlayer($username: String!, $password: String!) {
@@ -284,3 +289,39 @@ export function useGetPlayerLazyQuery(variables?: GetPlayerQueryVariables | VueC
   return VueApolloComposable.useLazyQuery<GetPlayerQuery, GetPlayerQueryVariables>(GetPlayerDocument, variables, options);
 }
 export type GetPlayerQueryCompositionFunctionResult = VueApolloComposable.UseQueryReturn<GetPlayerQuery, GetPlayerQueryVariables>;
+export const GetRoomsDocument = gql`
+    query GetRooms {
+  rooms {
+    id
+    roomState
+    players {
+      id
+      username
+    }
+    currentPlayer {
+      id
+      username
+    }
+  }
+}
+    `;
+
+/**
+ * __useGetRoomsQuery__
+ *
+ * To run a query within a Vue component, call `useGetRoomsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetRoomsQuery` returns an object from Apollo Client that contains result, loading and error properties
+ * you can use to render your UI.
+ *
+ * @param options that will be passed into the query, supported options are listed on: https://v4.apollo.vuejs.org/guide-composable/query.html#options;
+ *
+ * @example
+ * const { result, loading, error } = useGetRoomsQuery();
+ */
+export function useGetRoomsQuery(options: VueApolloComposable.UseQueryOptions<GetRoomsQuery, GetRoomsQueryVariables> | VueCompositionApi.Ref<VueApolloComposable.UseQueryOptions<GetRoomsQuery, GetRoomsQueryVariables>> | ReactiveFunction<VueApolloComposable.UseQueryOptions<GetRoomsQuery, GetRoomsQueryVariables>> = {}) {
+  return VueApolloComposable.useQuery<GetRoomsQuery, GetRoomsQueryVariables>(GetRoomsDocument, {}, options);
+}
+export function useGetRoomsLazyQuery(options: VueApolloComposable.UseQueryOptions<GetRoomsQuery, GetRoomsQueryVariables> | VueCompositionApi.Ref<VueApolloComposable.UseQueryOptions<GetRoomsQuery, GetRoomsQueryVariables>> | ReactiveFunction<VueApolloComposable.UseQueryOptions<GetRoomsQuery, GetRoomsQueryVariables>> = {}) {
+  return VueApolloComposable.useLazyQuery<GetRoomsQuery, GetRoomsQueryVariables>(GetRoomsDocument, {}, options);
+}
+export type GetRoomsQueryCompositionFunctionResult = VueApolloComposable.UseQueryReturn<GetRoomsQuery, GetRoomsQueryVariables>;

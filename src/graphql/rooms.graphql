@@ -1,0 +1,14 @@
+query GetRooms {
+  rooms {
+    id
+    roomState
+    players {
+      id
+      username
+    }
+    currentPlayer {
+      id
+      username
+    }
+  }
+} 

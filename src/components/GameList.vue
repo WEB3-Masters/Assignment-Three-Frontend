@@ -1,151 +1,147 @@
 <template>
     <div class="game-list">
-        <h2>Existing Games</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Hostname</th>
-                    <th>Player Count</th>
-                    <th>Game Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr 
-                    v-for="game in games" 
-                    :key="game.id" 
-                    @click="chooseGame(game.id)" 
-                    class="game-row"
-                    :class="{selected: selectedGameId === game.id}"
+        <h2>Available Games</h2>
+        <div class="rooms-container">
+            <div v-if="loading" class="loading">
+                Loading rooms...
+            </div>
+            <div v-else-if="error" class="error">
+                {{ error.message }}
+            </div>
+            <div v-else class="rooms">
+                <div v-for="room in rooms" :key="room.id" class="room-card">
+                    <div class="room-info">
+                        <span class="room-status" :class="room.roomState.toLowerCase()">
+                            {{ room.roomState }}
+                        </span>
+                        <div class="players">
+                            <span>Players: {{ room.players?.length || 0 }}</span>
+                            <div class="player-list">
+                                <div v-for="player in room.players" :key="player.id">
+                                    {{ player.username }}
+                                    {{ player.id === room.currentPlayer?.id ? '(current)' : '' }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <button 
+                        @click="joinRoom(room.id)"
+                        :disabled="room.roomState === 'IN_PROGRESS'"
                     >
-                        <td>{{ game.id }}</td>
-                        <td>{{ game.hostname }}</td>
-                        <td>{{ game.playerCount }}</td>
-                        <td :class="{'status-active': game.status === 'Active', 'status-inactive': game.status === 'Inactive'}">
-                            {{ game.status }}
-                        </td>
-                </tr>
-            </tbody>
-        </table>
-        <button @click="joinGame" :class="{disabled: !selectedGameId}">Join</button>
+                        Join Game
+                    </button>
+                </div>
+                <div v-if="rooms.length === 0" class="no-rooms">
+                    No games available. Create a new one!
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 
-<script setup>
-import { ref, defineProps, defineEmits } from 'vue';
+<script setup lang="ts">
+import { computed } from 'vue';
+import { useGetRoomsQuery } from '../generated/graphql';
+import { useRouter } from 'vue-router';
 
-const props = defineProps({
-    games: {
-        type: Array,
-        required:true
-    }
-});
+const router = useRouter();
+const { result, loading, error } = useGetRoomsQuery();
 
-const emit = defineEmits(['select-game']);
-const selectedGameId = ref(null);
+const rooms = computed(() => result.value?.rooms || []);
 
-function chooseGame(gameId)
-{
-    selectedGameId.value = gameId;
-    console.log(selectedGameId.value)
-    emit('select-game', selectedGameId.value);
-}
-
-function joinGame(gameId)
-{
-    if(selectedGameId.value)
-    {
-        console.log(`Joining game ${selectedGameId.value}`);
-    } else {
-        console.log("No game selected");
-    }
+function joinRoom(roomId: string) {
+    // TODO: Implement join room mutation
+    router.push(`/game/${roomId}`);
 }
 </script>
 
 <style scoped>
-
 .game-list {
-    display:flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    margin: 20px;
-    background-color: rgba(255, 255, 255, 0.1);
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+h2 {
+    color: #61dafb;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.rooms-container {
+    background: rgba(255, 255, 255, 0.1);
     border-radius: 8px;
     padding: 20px;
 }
 
-.selected {
-    background-color: #61dafb5a;
+.room-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid #61dafb;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
-.selected:hover {
-    background-color: #61dafb5a;
+.room-info {
+    flex: 1;
 }
 
-h2 {
-    color: #61dafb; /* Title color to match the existing styles */
+.room-status {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    margin-bottom: 8px;
 }
 
-table {
-    width: 100%; /* Full width */
-    border-collapse: collapse; /* Remove space between borders */
+.room-status.waiting {
+    background: #4CAF50;
 }
 
-th, td {
-    padding: 10px; /* Padding inside table cells */
-    border: 1px solid #61dafb; /* Border color */
-    text-align: left; /* Align text to the left */
+.room-status.in_progress {
+    background: #FFC107;
 }
 
-th {
-    background-color: #282c34; /* Header background */
-    color: white; /* Header text color */
+.players {
+    font-size: 0.9em;
 }
 
-tr {
-    background-color: rgba(255, 255, 255, 0.1); /* Slightly transparent cell background */
-    cursor: pointer;
+.player-list {
+    margin-top: 5px;
+    padding-left: 10px;
+    font-size: 0.8em;
+    color: #ccc;
 }
-
-tr:hover {
-    background-color: rgba(255,255,255,0.2);
-}
-
-.status-active {
-    color: #4caf50; /* Green color for active status */
-}
-
-.status-inactive {
-    color: #f44336; /* Red color for inactive status */
-}
-
 
 button {
-    margin: 10px;
-    padding: 10px 20px; /* Button padding */
-    border: none; /* No border */
-    border-radius: 5px; /* Rounded corners */
-    background-color: #61dafb; /* Button background color */
-    color: #282c34; /* Button text color */
-    cursor: pointer; /* Pointer cursor */
-    transition: background-color 0.3s; /* Smooth transition */
+    background: #61dafb;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    color: #282c34;
+    cursor: pointer;
+    transition: background-color 0.3s;
 }
 
-button:hover {
-    background-color: #21a1f1; /* Darker blue on hover */
+button:hover:not(:disabled) {
+    background: #21a1f1;
 }
 
-.disabled {
-    background-color: #282c34b7;
-    border:#282c34;
-    cursor:not-allowed;
+button:disabled {
+    background: #cccccc;
+    cursor: not-allowed;
 }
 
-.disabled:hover {
-    background-color: #282c34b7;
-    border:#282c34;
-    cursor:not-allowed;
+.loading, .error, .no-rooms {
+    text-align: center;
+    padding: 20px;
+    color: #ccc;
 }
 
+.error {
+    color: #ff4444;
+}
 </style>
