@@ -16,7 +16,9 @@
             accused: store.currentPlayerInTurn(),
           });
           store.updateAllPlayerDecks();
-        }">
+        }
+      "
+    >
       Accuse
     </button>
     <p class="message">
@@ -33,23 +35,29 @@
               drawCard();
             }
           "
-          :disabled = "drawnThisTurn"
-          :class="{inactive: drawnThisTurn}"
+          :disabled="drawnThisTurn"
+          :class="{ inactive: drawnThisTurn }"
         >
           Draw Card
         </button>
       </div>
-      <div 
-      class="discard"
-      :style="{backgroundColor: store.discardPileTopCard?.color?.toUpperCase()|| '#ccc'}"
+      <div
+        class="discard"
+        :style="{
+          backgroundColor:
+            store.discardPileTopCard?.color?.toUpperCase() || '#ccc',
+        }"
       >
-        <span class="discard-text">{{ store.discardPileTopCard?.type === 'NUMBERED'
-          ? store.discardPileTopCard?.number
-          : store.discardPileTopCard?.type}}
-        </span>  
+        <span class="discard-text"
+          >{{
+            store.discardPileTopCard?.type === "NUMBERED"
+              ? store.discardPileTopCard?.number
+              : store.discardPileTopCard?.type
+          }}
+        </span>
       </div>
     </div>
-    
+
     <PlayerHand
       :cards="store.players[playerIndex].deck"
       :isActive="store.isPlayerInTurn(playerIndex)"
@@ -84,21 +92,18 @@ const playerIndex = 0;
 
 //<---- Card behaviour ---->
 const cardsContainer = ref<HTMLDivElement | null>(null);
- 
 
-watch (
+watch(
   () => store.currentPlayerInTurn(),
   (newPlayer) => {
-    if(newPlayer !== currentPlayer) {
+    if (newPlayer !== currentPlayer) {
       drawnThisTurn.value = false;
     }
   }
-)
+);
 
-function drawCard()
-{
-  if(!drawnThisTurn.value)
-  {
+function drawCard() {
+  if (!drawnThisTurn.value) {
     store.draw();
     drawnThisTurn.value = true;
   }
@@ -112,7 +117,6 @@ const navigateToBreakScreen = () => {
     name: "Break",
   });
 };
-
 </script>
 
 <style scoped lang="css">
@@ -137,14 +141,13 @@ const navigateToBreakScreen = () => {
 
 .draw {
   background-color: #101010;
-  color:#ffffff;
+  color: #ffffff;
 }
 
 .colorselector {
   display: flex;
   align-items: center;
   justify-content: center;
-
 }
 
 .discard {
