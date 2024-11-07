@@ -193,6 +193,14 @@ export type GetPlayerQueryVariables = Exact<{
 
 export type GetPlayerQuery = { __typename?: 'Query', player?: { __typename?: 'Player', id: any, username: string } | null };
 
+export type JoinRoomMutationVariables = Exact<{
+  roomId: Scalars['UUID']['input'];
+  playerId: Scalars['UUID']['input'];
+}>;
+
+
+export type JoinRoomMutation = { __typename?: 'Mutation', joinRoom: { __typename?: 'Room', id: any } };
+
 export type GetRoomsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
@@ -296,6 +304,36 @@ export function useGetPlayerLazyQuery(variables?: GetPlayerQueryVariables | VueC
   return VueApolloComposable.useLazyQuery<GetPlayerQuery, GetPlayerQueryVariables>(GetPlayerDocument, variables, options);
 }
 export type GetPlayerQueryCompositionFunctionResult = VueApolloComposable.UseQueryReturn<GetPlayerQuery, GetPlayerQueryVariables>;
+export const JoinRoomDocument = gql`
+    mutation JoinRoom($roomId: UUID!, $playerId: UUID!) {
+  joinRoom(roomId: $roomId, playerId: $playerId) {
+    id
+  }
+}
+    `;
+
+/**
+ * __useJoinRoomMutation__
+ *
+ * To run a mutation, you first call `useJoinRoomMutation` within a Vue component and pass it any options that fit your needs.
+ * When your component renders, `useJoinRoomMutation` returns an object that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - Several other properties: https://v4.apollo.vuejs.org/api/use-mutation.html#return
+ *
+ * @param options that will be passed into the mutation, supported options are listed on: https://v4.apollo.vuejs.org/guide-composable/mutation.html#options;
+ *
+ * @example
+ * const { mutate, loading, error, onDone } = useJoinRoomMutation({
+ *   variables: {
+ *     roomId: // value for 'roomId'
+ *     playerId: // value for 'playerId'
+ *   },
+ * });
+ */
+export function useJoinRoomMutation(options: VueApolloComposable.UseMutationOptions<JoinRoomMutation, JoinRoomMutationVariables> | ReactiveFunction<VueApolloComposable.UseMutationOptions<JoinRoomMutation, JoinRoomMutationVariables>> = {}) {
+  return VueApolloComposable.useMutation<JoinRoomMutation, JoinRoomMutationVariables>(JoinRoomDocument, options);
+}
+export type JoinRoomMutationCompositionFunctionResult = VueApolloComposable.UseMutationReturn<JoinRoomMutation, JoinRoomMutationVariables>;
 export const GetRoomsDocument = gql`
     query GetRooms {
   rooms {

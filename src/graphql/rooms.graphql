@@ -1,3 +1,9 @@
+mutation JoinRoom($roomId: UUID!, $playerId: UUID!) {
+  joinRoom(roomId: $roomId, playerId: $playerId) {
+    id
+  }
+}
+
 query GetRooms {
   rooms {
     id
@@ -11,7 +17,7 @@ query GetRooms {
       username
     }
   }
-} 
+}
 
 subscription RoomUpdated($roomId: UUID!) {
   roomUpdated(roomId: $roomId) {
@@ -42,4 +48,4 @@ subscription RoomUpdated($roomId: UUID!) {
       }
     }
   }
-} 
+}

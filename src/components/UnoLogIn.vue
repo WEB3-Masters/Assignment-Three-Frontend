@@ -1,235 +1,250 @@
 <template>
-    <div class="login-screen">
-        <h1>Welcome to UNO</h1>
-        <div>
-            <span class="text">
-                <p>Choose below to sign up or sign in</p>
-            </span>
-            <div class="u_sign">
-                <div class="field">
-                    <div class="textinput">
-                        <label for="username-signin">Username</label>
-                        <input 
-                            id="username-signin" 
-                            v-model="signupUsername"
-                            type="text" 
-                            placeholder="Enter your username" 
-                        />
-                    </div>
-                    <div class="textinput">
-                        <label for="password-signin">Password</label>
-                        <input 
-                            id="password-signin" 
-                            v-model="signupPassword"
-                            type="password" 
-                            placeholder="Enter your password" 
-                        />
-                    </div>
-                    <div class="btn">
-                        <button 
-                            @click="signUp"
-                            :disabled="registerLoading"
-                        >
-                            {{ registerLoading ? 'Signing up...' : 'Sign up' }}
-                        </button>
-                    </div>
-                    <div v-if="registerError" class="error-message">
-                        {{ registerError.message }}
-                    </div>
-                </div>
-                <div></div>
-                <div class="field">
-                    <div class="textinput">
-                        <label for="username-login">Username</label>
-                        <input 
-                            id="username-login" 
-                            v-model="loginUsername"
-                            type="text" 
-                            placeholder="Enter your username" 
-                        />
-                    </div>
-                    <div class="textinput">
-                        <label for="password-login">Password</label>
-                        <input 
-                            id="password-login" 
-                            v-model="loginPassword"
-                            type="password" 
-                            placeholder="Enter your password" 
-                        />
-                    </div>
-                    <div class="btn">
-                        <button 
-                            @click="logIn"
-                            :disabled="loginLoading"
-                        >
-                            {{ loginLoading ? 'Logging in...' : 'Log in' }}
-                        </button>
-                    </div>
-                    <div v-if="loginError" class="error-message">
-                        {{ loginError.message }}
-                    </div>
-                </div>
-            </div>
+  <div class="login-screen">
+    <h1>Welcome to UNO</h1>
+    <div>
+      <span class="text">
+        <p>Choose below to sign up or sign in</p>
+      </span>
+      <div class="u_sign">
+        <div class="field">
+          <div class="textinput">
+            <label for="username-signin">Username</label>
+            <input
+              id="username-signin"
+              v-model="signupUsername"
+              type="text"
+              placeholder="Enter your username"
+            />
+          </div>
+          <div class="textinput">
+            <label for="password-signin">Password</label>
+            <input
+              id="password-signin"
+              v-model="signupPassword"
+              type="password"
+              placeholder="Enter your password"
+            />
+          </div>
+          <div class="btn">
+            <button @click="signUp" :disabled="registerLoading">
+              {{ registerLoading ? "Signing up..." : "Sign up" }}
+            </button>
+          </div>
+          <div v-if="registerError" class="error-message">
+            {{ registerError.message }}
+          </div>
         </div>
+        <div></div>
+        <div class="field">
+          <div class="textinput">
+            <label for="username-login">Username</label>
+            <input
+              id="username-login"
+              v-model="loginUsername"
+              type="text"
+              placeholder="Enter your username"
+            />
+          </div>
+          <div class="textinput">
+            <label for="password-login">Password</label>
+            <input
+              id="password-login"
+              v-model="loginPassword"
+              type="password"
+              placeholder="Enter your password"
+            />
+          </div>
+          <div class="btn">
+            <button @click="logIn" :disabled="loginLoading">
+              {{ loginLoading ? "Logging in..." : "Log in" }}
+            </button>
+          </div>
+          <div v-if="loginError" class="error-message">
+            {{ loginError.message }}
+          </div>
+        </div>
+      </div>
     </div>
+  </div>
 </template>
 
 <script setup>
-import { useGameStore } from '../stores/GameStore';
-import { useRouter } from 'vue-router';
-import { ref } from 'vue';
-import { useLoginPlayerMutation, useRegisterPlayerMutation } from '../generated/graphql';
+import { useGameStore } from "../stores/GameStore";
+import { useRouter } from "vue-router";
+import { ref } from "vue";
+import {
+  useLoginPlayerMutation,
+  useRegisterPlayerMutation,
+} from "../generated/graphql";
 
 const router = useRouter();
 const store = useGameStore();
 
 // Add refs for form inputs
-const loginUsername = ref('');
-const loginPassword = ref('');
-const signupUsername = ref('');
-const signupPassword = ref('');
+const loginUsername = ref("");
+const loginPassword = ref("");
+const signupUsername = ref("");
+const signupPassword = ref("");
 
 // Add mutations
-const { mutate: loginPlayer, loading: loginLoading, error: loginError } = useLoginPlayerMutation();
-const { mutate: registerPlayer, loading: registerLoading, error: registerError } = useRegisterPlayerMutation();
+const {
+  mutate: loginPlayer,
+  loading: loginLoading,
+  error: loginError,
+} = useLoginPlayerMutation();
+const {
+  mutate: registerPlayer,
+  loading: registerLoading,
+  error: registerError,
+} = useRegisterPlayerMutation();
 
 async function logIn() {
-    try {
-        const response = await loginPlayer({
-            username: loginUsername.value,
-            password: loginPassword.value
-        });
-        
-        if (response?.data?.loginPlayer) {
-            localStorage.setItem('token', response.data.loginPlayer);
-            router.push("/setup");
-        }
-    } catch (error) {
-        console.error('Login failed:', error);
+  try {
+    const response = await loginPlayer({
+      username: loginUsername.value,
+      password: loginPassword.value,
+    });
+
+    if (response?.data?.loginPlayer) {
+      localStorage.setItem("token", response.data.loginPlayer);
+      router.push("/setup");
     }
+  } catch (error) {
+    console.error("Login failed:", error);
+  }
 }
 
 async function signUp() {
-    try {
-        const response = await registerPlayer({
-            username: signupUsername.value,
-            password: signupPassword.value
-        });
-        
-        if (response?.data?.registerPlayer) {
-            // After successful registration, attempt to log in
-            const loginResponse = await loginPlayer({
-                username: signupUsername.value,
-                password: signupPassword.value
-            });
-            
-            if (loginResponse?.data?.loginPlayer) {
-                localStorage.setItem('token', loginResponse.data.loginPlayer);
-                router.push("/setup");
-            }
-        }
-    } catch (error) {
-        console.error('Registration failed:', error);
+  try {
+    const response = await registerPlayer({
+      username: signupUsername.value,
+      password: signupPassword.value,
+    });
+
+    if (response?.data?.registerPlayer) {
+      // After successful registration, attempt to log in
+      const loginResponse = await loginPlayer({
+        username: signupUsername.value,
+        password: signupPassword.value,
+      });
+
+      if (loginResponse?.data?.loginPlayer) {
+        localStorage.setItem("token", loginResponse.data.loginPlayer);
+        router.push("/setup");
+      }
     }
+  } catch (error) {
+    console.error("Registration failed:", error);
+  }
 }
 </script>
 
 <style>
 body {
-    background-color: #282c34; /* Dark background for contrast */
-    color: white;
-    font-family: 'Arial', sans-serif; /* Set a clean font */
-    margin: 0;
-    padding: 0;
+  background-color: #282c34; /* Dark background for contrast */
+  color: white;
+  font-family: "Arial", sans-serif; /* Set a clean font */
+  margin: 0;
+  padding: 0;
 }
 
 .login-screen {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100vh; /* Full height for centering */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh; /* Full height for centering */
 }
 
 h1 {
-    font-size: 36px;
-    margin-bottom: 20px; /* Space below the title */
-    color: #61dafb; /* Light blue color for the title */
+  font-size: 36px;
+  margin-bottom: 20px; /* Space below the title */
+  color: #61dafb; /* Light blue color for the title */
 }
 
 .text {
-    display: flex;
-    align-self: center;
-    justify-self: center;
-    color: #ffffff; /* White text */
-    font-size: 20px; /* Adjusted font size */
-    margin-bottom: 20px; /* Space below the text */
+  display: flex;
+  align-self: center;
+  justify-self: center;
+  color: #ffffff; /* White text */
+  font-size: 20px; /* Adjusted font size */
+  margin-bottom: 20px; /* Space below the text */
 }
 
 .u_sign {
-    display: flex;
-    flex-direction: row; /* Stack fields vertically */
-    max-width: 600px; /* Max width for the sign in section */
-    width: 100%;
+  display: flex;
+  flex-direction: row; /* Stack fields vertically */
+  max-width: 600px; /* Max width for the sign in section */
+  width: 100%;
 }
 
 .field {
-    display: flex;
-    flex-direction: column;
-    margin: 20px; /* Space between fields */
-    padding: 20px; /* Padding around the fields */
-    border: 1px solid #61dafb; /* Border around each field */
-    border-radius: 8px; /* Rounded corners */
-    background-color: rgba(255, 255, 255, 0.1); /* Slightly transparent background */
+  display: flex;
+  flex-direction: column;
+  margin: 20px; /* Space between fields */
+  padding: 20px; /* Padding around the fields */
+  border: 1px solid #61dafb; /* Border around each field */
+  border-radius: 8px; /* Rounded corners */
+  background-color: rgba(
+    255,
+    255,
+    255,
+    0.1
+  ); /* Slightly transparent background */
 }
 
 .textinput {
-    margin-bottom: 10px; /* Space between input fields */
+  margin-bottom: 10px; /* Space between input fields */
 }
 
 .textinput label {
-    display: block; /* Block display for label */
-    margin-bottom: 5px; /* Space below the label */
+  display: block; /* Block display for label */
+  margin-bottom: 5px; /* Space below the label */
 }
 
 .textinput input {
-    padding: 10px; /* Padding inside the input */
-    border: 1px solid #61dafb; /* Border color */
-    border-radius: 4px; /* Rounded corners */
-    background-color: rgba(255, 255, 255, 0.2); /* Slightly transparent input background */
-    color: white; /* Input text color */
-    width: 90%; /* Full width input */
+  padding: 10px; /* Padding inside the input */
+  border: 1px solid #61dafb; /* Border color */
+  border-radius: 4px; /* Rounded corners */
+  background-color: rgba(
+    255,
+    255,
+    255,
+    0.2
+  ); /* Slightly transparent input background */
+  color: white; /* Input text color */
+  width: 90%; /* Full width input */
 }
 
 .btn {
-    display: flex;
-    justify-content: center; /* Center the button */
+  display: flex;
+  justify-content: center; /* Center the button */
 }
 
 .btn button {
-    padding: 10px 20px; /* Button padding */
-    border: none; /* No border */
-    border-radius: 5px; /* Rounded corners */
-    background-color: #61dafb; /* Button background color */
-    color: #282c34; /* Button text color */
-    font-size: 16px; /* Button text size */
-    cursor: pointer; /* Pointer cursor on hover */
-    transition: background-color 0.3s; /* Smooth transition for hover */
+  padding: 10px 20px; /* Button padding */
+  border: none; /* No border */
+  border-radius: 5px; /* Rounded corners */
+  background-color: #61dafb; /* Button background color */
+  color: #282c34; /* Button text color */
+  font-size: 16px; /* Button text size */
+  cursor: pointer; /* Pointer cursor on hover */
+  transition: background-color 0.3s; /* Smooth transition for hover */
 }
 
 .btn button:hover {
-    background-color: #21a1f1; /* Darker blue on hover */
+  background-color: #21a1f1; /* Darker blue on hover */
 }
 
 .btn button:active {
-    background-color: #1a8bb1; /* Even darker on click */
+  background-color: #1a8bb1; /* Even darker on click */
 }
 
 /* Add new styles */
 .error-message {
-    color: #ff4444;
-    margin-top: 10px;
-    text-align: center;
-    font-size: 14px;
+  color: #ff4444;
+  margin-top: 10px;
+  text-align: center;
+  font-size: 14px;
 }
 </style>
