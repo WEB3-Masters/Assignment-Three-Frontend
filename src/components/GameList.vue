@@ -23,7 +23,7 @@
             </div>
           </div>
           <button
-            @click="join(room.id)"
+            @click="store.joinGame(token, room.id, joinRoom)"
             :disabled="room.roomState === 'IN_PROGRESS'"
           >
             Join Game
@@ -45,11 +45,15 @@ import {
   useRoomUpdatedSubscription,
 } from "../generated/graphql";
 import { useRouter } from "vue-router";
+import { useGameStore } from "../stores/GameStore";
 
 const router = useRouter();
 const { result, loading, error } = useGetRoomsQuery();
 
 const rooms = computed(() => result.value?.rooms || []);
+const store = useGameStore();
+const token: string = localStorage.getItem("token") || "";
+
 const {
   mutate: joinRoom,
   loading: joinLoading,
@@ -57,25 +61,38 @@ const {
   onDone: joinDone,
 } = useJoinRoomMutation();
 
-async function join(roomId: string) {
-  // TODO: Implement join room mutation
+// const {
+//   mutate: joinRoom,
+//   loading: joinLoading,
+//   error: joinError,
+//   onDone: joinDone,
+// } = useJoinRoomMutation();
 
-  try {
-    const token = localStorage.getItem("token");
+// async function join(roomId: string) {
+//   // TODO: Implement join room mutation
+//   const {
+//     mutate: joinRoom,
+//     loading: joinLoading,
+//     error: joinError,
+//     onDone: joinDone,
+//   } = useJoinRoomMutation();
 
-    const response = await joinRoom({
-      roomId: roomId,
-      playerId: token,
-    });
+//   try {
+//     const token = localStorage.getItem("token");
 
-    console.log(response);
-  } catch (error) {
-    console.error("Login failed:", error);
-  }
-  console.log("HERE");
+//     const response = await joinRoom({
+//       roomId: roomId,
+//       playerId: token,
+//     });
 
-  router.push(`/game/${roomId}`);
-}
+//     console.log(response);
+//   } catch (error) {
+//     console.error("Login failed:", error);
+//   }
+//   console.log("HERE");
+
+//   router.push(`/game/${roomId}`);
+// }
 </script>
 
 <style scoped>

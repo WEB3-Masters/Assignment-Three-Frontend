@@ -12,6 +12,23 @@ export const useGameStore = defineStore("game", () => {
 	const engineService: EngineService = new EngineService();
 	const currentPlayerIndex = ref(0);
 	const router = useRouter();
+
+	async function joinGame(roomId: string, playerId: string,joinRoom: MutatateFunction) {
+		try {
+			// Await the response from joinGame to ensure it completes
+			const response = await engineService.joinGame(roomId, playerId,joinRoom);
+			
+			// Optionally, verify the response here
+			if (response) {
+				router.push(`/game/${roomId}`);
+			} else {
+				console.error("Failed to join the game.");
+			}
+		} catch (error) {
+			console.error("Error joining the game:", error);
+		}
+	}
+
 	function createGame(bots: ("easy" | "medium" | "hard")[]) {
 		const _players = engineService.createGame(bots);
 		players.value = _players.map((player, index) => {
@@ -128,6 +145,7 @@ export const useGameStore = defineStore("game", () => {
 		});
 	}
 	return {
+		joinGame,
 		createGame,
 		getPlayerScore,
 		isPlayerInTurn,

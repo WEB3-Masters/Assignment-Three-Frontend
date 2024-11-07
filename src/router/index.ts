@@ -18,10 +18,12 @@ const router = createRouter({
         name:'Setup', 
         component:UnoGameSetup
     },
-    {   path:'/game',
-        name:'Game', 
-        component:UnoGamePlay, 
-    },
+    {
+        path: '/game/:roomId',  // Add dynamic segment ":roomId"
+        name: 'Game',
+        component: UnoGamePlay,
+        props: true, // Pass route params as props to component
+      },
     {
         path: "/over",
         name: "game over",

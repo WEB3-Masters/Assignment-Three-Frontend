@@ -4,11 +4,34 @@ import type { UnoFailure } from "./hand";
 import type { EngineInterface, Player } from "./interfaces/engineInterface";
 import { createUnoGame, type Game } from "../model/uno";
 import { decideMove } from "./BotAI";
-export class EngineService implements EngineInterface {
+import { MutateFunction } from "@vue/apollo-composable";
+export class EngineService {
 	game: Game = createUnoGame({ players: ["a", "b"] });
 	discardPileTopCardRef = ref<Card | undefined>();
 	bots: ("easy" | "medium" | "hard")[] = [];
 	public onEnd: () => void = () => {};
+
+	async joinGame(
+		roomId: string,
+		playerId: string,
+		joinRoom: MutateFunction
+	  ): Promise<string | undefined> {
+		try {
+		  const result = await joinRoom({
+			variables: { roomId, playerId },
+		  });
+	  
+		  const response = result.data?.joinRoom;
+		  if (response) {
+			console.log("HERE:", response);
+			return response;
+		  }
+		} catch (error) {
+		  console.error("Join game failed:", error);
+		}
+		return undefined;
+	  }
+
 	createGame(bots: ("easy" | "medium" | "hard")[]): Array<Player> {
 		const players = Array.from({ length: bots.length + 1 }, (_, index) => {
 			if (index === 0) return "player";

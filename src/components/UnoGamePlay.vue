@@ -55,7 +55,7 @@
               : store.discardPileTopCard?.type
           }}
         </span>
-      </div>
+      </div>  
     </div>
 
     <PlayerHand
@@ -78,7 +78,7 @@ import { Hand } from "../model/hand";
 import { decideMove } from "../model/BotAI";
 import { useGameStore } from "../stores/GameStore";
 import ColorSelector from "./ColorSelector.vue";
-import { useRoomUpdatedSubscription } from '../generated/graphql';
+import { useRoomUpdatedSubscription } from "../generated/graphql";
 
 const route = useRoute();
 const store = useGameStore();
@@ -124,29 +124,29 @@ const roomId = route.params.roomId as string;
 let stopSubscription: (() => void) | undefined;
 
 onMounted(() => {
-    const { onResult, onError, stop } = useRoomUpdatedSubscription({
-        roomId
-    });
+  const { onResult, onError, stop } = useRoomUpdatedSubscription({
+    roomId,
+  });
 
-    stopSubscription = stop;
+  stopSubscription = stop;
 
-    onResult((result) => {
-        const updatedRoom = result.data?.roomUpdated;
-        if (updatedRoom) {
-            console.log('Room updated:', updatedRoom);
-            // TODO: Update your store/game state here
-        }
-    });
+  onResult((result) => {
+    const updatedRoom = result.data?.roomUpdated;
+    if (updatedRoom) {
+      console.log("Room updated:", updatedRoom);
+      // TODO: Update your store/game state here
+    }
+  });
 
-    onError((error) => {
-        console.error('Subscription error:', error);
-    });
+  onError((error) => {
+    console.error("Subscription error:", error);
+  });
 });
 
 onUnmounted(() => {
-    if (stopSubscription) {
-        stopSubscription()
-    }
+  if (stopSubscription) {
+    stopSubscription();
+  }
 });
 </script>
 
