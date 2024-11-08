@@ -1,6 +1,6 @@
 <template>
     <div class="new-game">
-    <h2>New Game</h2>
+    <h2>Bot Game</h2>
     <div>
       <label>
         Number of players (Bots)

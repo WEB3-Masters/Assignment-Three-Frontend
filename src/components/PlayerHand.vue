@@ -34,7 +34,7 @@ import ColorSelector from "./ColorSelector.vue";
 
 const store = useGameStore();
 const props = defineProps<{
-  cards: Array<{ type: CardType; color: CardColor; number?: number }>;
+  cards: Array<{ type: CardType; color?: CardColor; number?: number }>;
   isActive: boolean;
 }>();
 
@@ -60,7 +60,7 @@ function play(index: number, cardType: CardType) {
 }
 
 function isPlayable(index: number): boolean {
-  return props.isActive && store.canPlay(index);
+  return props.isActive && !!store.canPlay(index);
 }
 </script>
 

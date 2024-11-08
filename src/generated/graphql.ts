@@ -21,7 +21,7 @@ export type Scalars = {
 
 export type Card = {
   __typename?: 'Card';
-  color?: Maybe<CardColor>;
+  color: CardColor;
   deck?: Maybe<Deck>;
   id: Scalars['UUID']['output'];
   number?: Maybe<Scalars['Int']['output']>;
@@ -203,7 +203,7 @@ export type RoomUpdatedSubscriptionVariables = Exact<{
 }>;
 
 
-export type RoomUpdatedSubscription = { __typename?: 'Subscription', roomUpdated: { __typename?: 'Room', id: any, roomState?: RoomState | null, players?: Array<{ __typename?: 'Player', id: any, username: string }> | null, currentPlayer?: { __typename?: 'Player', id: any, username: string } | null, deck?: { __typename?: 'Deck', cards: Array<{ __typename?: 'Card', id: any, type: CardType, color?: CardColor | null, number?: number | null }> } | null, discardPile?: { __typename?: 'Deck', cards: Array<{ __typename?: 'Card', id: any, type: CardType, color?: CardColor | null, number?: number | null }> } | null } };
+export type RoomUpdatedSubscription = { __typename?: 'Subscription', roomUpdated: { __typename?: 'Room', id: any, roomState?: RoomState | null, players?: Array<{ __typename?: 'Player', id: any, username: string }> | null, currentPlayer?: { __typename?: 'Player', id: any, username: string } | null, deck?: { __typename?: 'Deck', cards: Array<{ __typename?: 'Card', id: any, type: CardType, color: CardColor, number?: number | null }> } | null, discardPile?: { __typename?: 'Deck', cards: Array<{ __typename?: 'Card', id: any, type: CardType, color: CardColor, number?: number | null }> } | null } };
 
 
 export const LoginPlayerDocument = gql`

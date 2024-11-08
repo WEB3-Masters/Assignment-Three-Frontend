@@ -13,7 +13,7 @@ export const colors: CardColor[] = ["BLUE", "GREEN", "RED", "YELLOW"];
 
 export interface Card {
   type: CardType;
-  color?: CardColor;
+  color: CardColor | undefined;
   number?: number;
 }
 
