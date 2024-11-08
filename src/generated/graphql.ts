@@ -21,7 +21,7 @@ export type Scalars = {
 
 export type Card = {
   __typename?: 'Card';
-  color: CardColor;
+  color?: Maybe<CardColor>;
   deck?: Maybe<Deck>;
   id: Scalars['UUID']['output'];
   number?: Maybe<Scalars['Int']['output']>;
@@ -110,6 +110,7 @@ export type Player = {
   cards?: Maybe<Array<Card>>;
   id: Scalars['UUID']['output'];
   password: Scalars['String']['output'];
+  room?: Maybe<Room>;
   username: Scalars['String']['output'];
 };
 
@@ -162,7 +163,7 @@ export enum RoomState {
 
 export type Subscription = {
   __typename?: 'Subscription';
-  roomUpdated: Room;
+  roomUpdated?: Maybe<Room>;
 };
 
 
@@ -198,12 +199,34 @@ export type GetRoomsQueryVariables = Exact<{ [key: string]: never; }>;
 
 export type GetRoomsQuery = { __typename?: 'Query', rooms: Array<{ __typename?: 'Room', id: any, roomState?: RoomState | null, players?: Array<{ __typename?: 'Player', id: any, username: string }> | null, currentPlayer?: { __typename?: 'Player', id: any, username: string } | null }> };
 
+export type CreateRoomMutationVariables = Exact<{
+  playerId: Scalars['UUID']['input'];
+}>;
+
+
+export type CreateRoomMutation = { __typename?: 'Mutation', createRoom: { __typename?: 'Room', id: any } };
+
+export type JoinRoomMutationVariables = Exact<{
+  roomId: Scalars['UUID']['input'];
+  playerId: Scalars['UUID']['input'];
+}>;
+
+
+export type JoinRoomMutation = { __typename?: 'Mutation', joinRoom: { __typename?: 'Room', id: any } };
+
+export type UpdateRoomMutationVariables = Exact<{
+  room: RoomInput;
+}>;
+
+
+export type UpdateRoomMutation = { __typename?: 'Mutation', updateRoom: { __typename?: 'Room', id: any, roomState?: RoomState | null, players?: Array<{ __typename?: 'Player', id: any, username: string }> | null, currentPlayer?: { __typename?: 'Player', id: any, username: string } | null, deck?: { __typename?: 'Deck', cards: Array<{ __typename?: 'Card', id: any, type: CardType, color?: CardColor | null, number?: number | null }> } | null, discardPile?: { __typename?: 'Deck', cards: Array<{ __typename?: 'Card', id: any, type: CardType, color?: CardColor | null, number?: number | null }> } | null } };
+
 export type RoomUpdatedSubscriptionVariables = Exact<{
   roomId: Scalars['UUID']['input'];
 }>;
 
 
-export type RoomUpdatedSubscription = { __typename?: 'Subscription', roomUpdated: { __typename?: 'Room', id: any, roomState?: RoomState | null, players?: Array<{ __typename?: 'Player', id: any, username: string }> | null, currentPlayer?: { __typename?: 'Player', id: any, username: string } | null, deck?: { __typename?: 'Deck', cards: Array<{ __typename?: 'Card', id: any, type: CardType, color: CardColor, number?: number | null }> } | null, discardPile?: { __typename?: 'Deck', cards: Array<{ __typename?: 'Card', id: any, type: CardType, color: CardColor, number?: number | null }> } | null } };
+export type RoomUpdatedSubscription = { __typename?: 'Subscription', roomUpdated?: { __typename?: 'Room', id: any, roomState?: RoomState | null, players?: Array<{ __typename?: 'Player', id: any, username: string, password: string, cards?: Array<{ __typename?: 'Card', id: any, type: CardType, color?: CardColor | null, number?: number | null }> | null }> | null, currentPlayer?: { __typename?: 'Player', id: any, username: string, password: string, cards?: Array<{ __typename?: 'Card', id: any, type: CardType, color?: CardColor | null, number?: number | null }> | null } | null, deck?: { __typename?: 'Deck', id: any, cards: Array<{ __typename?: 'Card', id: any, type: CardType, color?: CardColor | null, number?: number | null }> } | null, discardPile?: { __typename?: 'Deck', id: any, cards: Array<{ __typename?: 'Card', id: any, type: CardType, color?: CardColor | null, number?: number | null }> } | null } | null };
 
 
 export const LoginPlayerDocument = gql`
@@ -332,9 +355,68 @@ export function useGetRoomsLazyQuery(options: VueApolloComposable.UseQueryOption
   return VueApolloComposable.useLazyQuery<GetRoomsQuery, GetRoomsQueryVariables>(GetRoomsDocument, {}, options);
 }
 export type GetRoomsQueryCompositionFunctionResult = VueApolloComposable.UseQueryReturn<GetRoomsQuery, GetRoomsQueryVariables>;
-export const RoomUpdatedDocument = gql`
-    subscription RoomUpdated($roomId: UUID!) {
-  roomUpdated(roomId: $roomId) {
+export const CreateRoomDocument = gql`
+    mutation CreateRoom($playerId: UUID!) {
+  createRoom(hostId: $playerId) {
+    id
+  }
+}
+    `;
+
+/**
+ * __useCreateRoomMutation__
+ *
+ * To run a mutation, you first call `useCreateRoomMutation` within a Vue component and pass it any options that fit your needs.
+ * When your component renders, `useCreateRoomMutation` returns an object that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - Several other properties: https://v4.apollo.vuejs.org/api/use-mutation.html#return
+ *
+ * @param options that will be passed into the mutation, supported options are listed on: https://v4.apollo.vuejs.org/guide-composable/mutation.html#options;
+ *
+ * @example
+ * const { mutate, loading, error, onDone } = useCreateRoomMutation({
+ *   variables: {
+ *     playerId: // value for 'playerId'
+ *   },
+ * });
+ */
+export function useCreateRoomMutation(options: VueApolloComposable.UseMutationOptions<CreateRoomMutation, CreateRoomMutationVariables> | ReactiveFunction<VueApolloComposable.UseMutationOptions<CreateRoomMutation, CreateRoomMutationVariables>> = {}) {
+  return VueApolloComposable.useMutation<CreateRoomMutation, CreateRoomMutationVariables>(CreateRoomDocument, options);
+}
+export type CreateRoomMutationCompositionFunctionResult = VueApolloComposable.UseMutationReturn<CreateRoomMutation, CreateRoomMutationVariables>;
+export const JoinRoomDocument = gql`
+    mutation JoinRoom($roomId: UUID!, $playerId: UUID!) {
+  joinRoom(roomId: $roomId, playerId: $playerId) {
+    id
+  }
+}
+    `;
+
+/**
+ * __useJoinRoomMutation__
+ *
+ * To run a mutation, you first call `useJoinRoomMutation` within a Vue component and pass it any options that fit your needs.
+ * When your component renders, `useJoinRoomMutation` returns an object that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - Several other properties: https://v4.apollo.vuejs.org/api/use-mutation.html#return
+ *
+ * @param options that will be passed into the mutation, supported options are listed on: https://v4.apollo.vuejs.org/guide-composable/mutation.html#options;
+ *
+ * @example
+ * const { mutate, loading, error, onDone } = useJoinRoomMutation({
+ *   variables: {
+ *     roomId: // value for 'roomId'
+ *     playerId: // value for 'playerId'
+ *   },
+ * });
+ */
+export function useJoinRoomMutation(options: VueApolloComposable.UseMutationOptions<JoinRoomMutation, JoinRoomMutationVariables> | ReactiveFunction<VueApolloComposable.UseMutationOptions<JoinRoomMutation, JoinRoomMutationVariables>> = {}) {
+  return VueApolloComposable.useMutation<JoinRoomMutation, JoinRoomMutationVariables>(JoinRoomDocument, options);
+}
+export type JoinRoomMutationCompositionFunctionResult = VueApolloComposable.UseMutationReturn<JoinRoomMutation, JoinRoomMutationVariables>;
+export const UpdateRoomDocument = gql`
+    mutation UpdateRoom($room: RoomInput!) {
+  updateRoom(room: $room) {
     id
     roomState
     players {
@@ -354,6 +436,76 @@ export const RoomUpdatedDocument = gql`
       }
     }
     discardPile {
+      cards {
+        id
+        type
+        color
+        number
+      }
+    }
+  }
+}
+    `;
+
+/**
+ * __useUpdateRoomMutation__
+ *
+ * To run a mutation, you first call `useUpdateRoomMutation` within a Vue component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateRoomMutation` returns an object that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - Several other properties: https://v4.apollo.vuejs.org/api/use-mutation.html#return
+ *
+ * @param options that will be passed into the mutation, supported options are listed on: https://v4.apollo.vuejs.org/guide-composable/mutation.html#options;
+ *
+ * @example
+ * const { mutate, loading, error, onDone } = useUpdateRoomMutation({
+ *   variables: {
+ *     room: // value for 'room'
+ *   },
+ * });
+ */
+export function useUpdateRoomMutation(options: VueApolloComposable.UseMutationOptions<UpdateRoomMutation, UpdateRoomMutationVariables> | ReactiveFunction<VueApolloComposable.UseMutationOptions<UpdateRoomMutation, UpdateRoomMutationVariables>> = {}) {
+  return VueApolloComposable.useMutation<UpdateRoomMutation, UpdateRoomMutationVariables>(UpdateRoomDocument, options);
+}
+export type UpdateRoomMutationCompositionFunctionResult = VueApolloComposable.UseMutationReturn<UpdateRoomMutation, UpdateRoomMutationVariables>;
+export const RoomUpdatedDocument = gql`
+    subscription RoomUpdated($roomId: UUID!) {
+  roomUpdated(roomId: $roomId) {
+    id
+    roomState
+    players {
+      id
+      username
+      password
+      cards {
+        id
+        type
+        color
+        number
+      }
+    }
+    currentPlayer {
+      id
+      username
+      password
+      cards {
+        id
+        type
+        color
+        number
+      }
+    }
+    deck {
+      id
+      cards {
+        id
+        type
+        color
+        number
+      }
+    }
+    discardPile {
+      id
       cards {
         id
         type

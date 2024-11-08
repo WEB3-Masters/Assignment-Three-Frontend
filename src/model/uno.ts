@@ -1,9 +1,10 @@
 import { type Shuffler, standardRandomizer } from "../utils/random_utils";
 import type { Card } from "./deck";
 import { createHand, Hand } from "./hand";
+import type { Player } from "./interfaces/engineInterface";
 
 export type Props = {
-	players: Array<string>;
+	players: Array<Player>;
 	targetScore: number;
 	randomize: () => number;
 	shuffler: Shuffler<Card>;
@@ -26,8 +27,13 @@ export class Game {
 		if (this.props.randomize !== undefined) randomNumber = this.props.randomize();
 		else randomNumber = standardRandomizer(this.props.players?.length ?? 2);
 
+		const defaultPlayers: Player[] = [
+			{ id: "A", name: "A", index: 0 },
+			{ id: "B", name: "B", index: 1 }
+		];
+
 		this.hand = createHand(
-			this.props.players ?? ["A", "B"],
+			this.props.players ?? defaultPlayers,
 			randomNumber,
 			this.props.shuffler,
 			this.props.cardsPerPlayer
@@ -40,7 +46,7 @@ export class Game {
 		this.targetScore = createGame.targetScore ?? 500;
 	}
 
-	player(playerIndex: number): string | undefined {
+	player(playerIndex: number): Player | undefined {
 		return this.hand?.player(playerIndex);
 	}
 
@@ -81,8 +87,13 @@ export class Game {
 			this.onGameEnd(winner);
 		}
 
+		const defaultPlayers: Player[] = [
+			{ id: "A", name: "A", index: 0 },
+			{ id: "B", name: "B", index: 1 }
+		];
+
 		this.hand = createHand(
-			this.props.players ?? ["A", "B"],
+			this.props.players ?? defaultPlayers,
 			randomNumber,
 			this.props.shuffler,
 			this.props.cardsPerPlayer

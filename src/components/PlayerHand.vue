@@ -7,7 +7,7 @@
     <h2>Your hand</h2>
     <div class="cards">
       <Card
-        v-for="(card, index) in store.players[playerIndex].deck"
+        v-for="(card, index) in store.players[playerIndex].hand"
         :key="index"
         :type="card.type"
         :color="card.color"

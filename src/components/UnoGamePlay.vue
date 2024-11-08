@@ -7,7 +7,7 @@
       {{ store.currentPlayerInTurn() }}
     </p>
     <button
-      v-if="store.players[store.currentPlayerInTurn() - 1]?.deck?.length === 1"
+      v-if="store.players[store.currentPlayerInTurn() - 1]?.hand?.length === 1"
       @click="
         () => {
           // Assuming the accuser (you) is of index 0
@@ -59,7 +59,7 @@
     </div>
 
     <PlayerHand
-      :cards="store.players[playerIndex].deck"
+      :cards="store.players[playerIndex].hand"
       :isActive="store.isPlayerInTurn(playerIndex)"
     />
 
