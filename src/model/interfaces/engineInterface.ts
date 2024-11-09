@@ -1,4 +1,4 @@
-import type { Card, CardColor, Deck } from "../deck";
+import type { Card, CardColor } from "../deck";
 import type { UnoFailure } from "../hand";
 import type { Ref } from "vue";
 
@@ -8,7 +8,6 @@ export type Player = {
 	name: string;
 };
 export interface EngineInterface {
-	createGame(bots: ("easy" | "medium" | "hard")[]): Array<Player>;
 	getPlayerName(index: number): string | undefined;
 	getPlayerScore(index: number): number | undefined;
 	getPlayerDeck(index: number): Card[] | undefined;

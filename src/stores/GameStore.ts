@@ -1,23 +1,35 @@
-import { ExtendedPlayer, toGraphQLRoomInput, fromGraphQLRoom } from "../utils/graphql_utils";
+import { ExtendedPlayer, toGraphQLRoomInput, fromGraphQLRoom, toGraphQLInitialGameInput } from "../utils/graphql_utils";
 import { EngineService } from "../model/engineService";
 import { UnoFailure } from "../model/hand";
 import { defineStore } from "pinia";
-import { computed, ref } from "vue";
+import { ref } from "vue";
 import { useRouter } from "vue-router";
-import { useRoomUpdatedSubscription, useUpdateRoomMutation } from "../generated/graphql";
+import { useRoomUpdatedSubscription, useUpdateRoomMutation, useJoinRoomMutation, RoomState } from "../generated/graphql";
 import { CardColor } from "../model/deck";
+import { useInitializeGameMutation } from "../generated/graphql";
+import { useCreateRoomMutation } from "../generated/graphql";
 
 export const useGameStore = defineStore("game", () => {
 	const players = ref<ExtendedPlayer[]>([]);
-	const bots = computed(() => players.value.filter((player) => player.isBot));
-	const engineService: EngineService = new EngineService();
-	const currentPlayerIndex = ref(0);
-	const router = useRouter();
 	const roomId = ref<string>();
+	const currentPlayerIndex = ref(0);
+	const gameStarted = ref(false);
+	const MAX_PLAYERS = 4;
+
+	const engineService: EngineService = new EngineService();
+
+	let stopSubscription: (() => void) | undefined;
+	const router = useRouter();
+
+	const { mutate: joinRoom } = useJoinRoomMutation();
 
 	function subscribeToRoomUpdates(id: string) {
+		unsubscribeFromRoom();
+		
 		roomId.value = id;
-		const { onResult } = useRoomUpdatedSubscription({ roomId: id });
+		const { onResult, onError, stop } = useRoomUpdatedSubscription({ roomId: id });
+		
+		stopSubscription = stop;
 		
 		onResult((result) => {
 			const room = result.data?.roomUpdated;
@@ -25,16 +37,7 @@ export const useGameStore = defineStore("game", () => {
 
 			roomId.value = room.id;
 
-			const { extendedPlayers, currentPlayerIndex: newCurrentPlayerIndex } = fromGraphQLRoom(room);
-			
-			//TODO: Remove bots?
-			// Update player difficulties
-			extendedPlayers.forEach(player => {
-				if (player.isBot) {
-					const existingBot = bots.value.find(b => b.id === player.id);
-					player.difficulty = existingBot?.difficulty;
-				}
-			});
+			const { players:extendedPlayers, currentPlayerIndex: newCurrentPlayerIndex } = fromGraphQLRoom({players: room.players ?? [], currentPlayerId: room.currentPlayer?.id});
 
 			players.value = extendedPlayers;
 			currentPlayerIndex.value = newCurrentPlayerIndex;
@@ -42,6 +45,17 @@ export const useGameStore = defineStore("game", () => {
 			engineService.updateFromRoom(room);
 			updateAllPlayerDecks();
 		});
+
+		onError((error) => {
+			console.error('Subscription error:', error);
+		});
+	}
+
+	function unsubscribeFromRoom() {
+		if (stopSubscription) {
+			stopSubscription();
+			stopSubscription = undefined;
+		}
 	}
 
 	const { mutate: updateRoom } = useUpdateRoomMutation();
@@ -55,36 +69,19 @@ export const useGameStore = defineStore("game", () => {
 			players: players.value,
 			currentPlayerIndex: currentPlayerIndex.value,
 			deckCards: gameState.deck.cards,
+			deckId: gameState.deck.id,
 			discardPileCards: gameState.discardPile.cards,
-			hasEnded: gameState.hasEnded
+			discardPileId: gameState.discardPile.id,
+			roomState: gameState.hasEnded ? RoomState.InProgress : null
 		};
 
-		await updateRoom(toGraphQLRoomInput(params));
-	}
+		if(!gameState.hasEnded) {
+			await updateRoom(toGraphQLRoomInput(params));
+		}
+		else{
+			//TODO: Handle end of game
+		}
 
-	function createGame(bots: ("easy" | "medium" | "hard")[]) {
-		const _players = engineService.createGame(bots);
-		players.value = _players.map((player, index) => {
-			const isBot = player.name.includes("bot");
-			const difficulty = isBot ? bots[index - 1] : undefined;
-			return {
-				...player,
-				isBot,
-				hand: engineService.getPlayerDeck(player.index) ?? [],
-				difficulty,
-			};
-		});
-
-		engineService.onEnd = () => {
-			const query: Record<string, string | number> = {};
-			players.value.forEach((player) => {
-				query[player.name] = engineService.getPlayerScore(player.index) ?? 0;
-			});
-			router.push({ path: "/over", query });
-		};
-
-		nextTurn();
-		syncGameState();
 	}
 
 	async function play(cardIndex: number, nextColor?: CardColor) {
@@ -133,15 +130,8 @@ export const useGameStore = defineStore("game", () => {
 		return engineService.getTargetScore();
 	}
 
-	function makeBotMove() {
-		setTimeout(() => {
-			engineService.decideMove();
-			updateAllPlayerDecks();
-			nextTurn();
-		}, 2500);
-	}
-
-	async function checkForUnoFailure() {
+	//TODO: If we want to add saying uno, we need to add some logic here
+	/*async function checkForUnoFailure() {
 		const delayBetweenChecks = 500;
 		for (const bot of players.value) {
 			if (!bot.isBot) continue;
@@ -177,7 +167,7 @@ export const useGameStore = defineStore("game", () => {
 			}
 			await new Promise((resolve) => setTimeout(resolve, delayBetweenChecks));
 		}
-	}
+	}*/
 
 	function updateAllPlayerDecks() {
 		players.value.forEach((player) => {
@@ -187,17 +177,101 @@ export const useGameStore = defineStore("game", () => {
 
 	async function nextTurn() {
 		currentPlayerIndex.value = engineService.getCurrentPlayer()?.index ?? 0;
-		const currentPlayer = players.value[currentPlayerIndex.value];
 		await syncGameState();
-		checkForUnoFailure().then(() => {
-			if (currentPlayer?.isBot) {
-				makeBotMove();
+		//checkForUnoFailure();
+	}
+
+	async function joinGameRoom(roomId: string, playerId: string) {
+		try {
+			const result = await joinRoom({ roomId, playerId: playerId});
+			const room = result?.data?.joinRoom;
+			
+			if (!room) {
+				throw new Error("Failed to join room");
 			}
-		});
+
+			subscribeToRoomUpdates(roomId);
+
+			const { players: extendedPlayers, currentPlayerIndex: newCurrentPlayerIndex } = fromGraphQLRoom({players: room.players ?? [], currentPlayerId: room.currentPlayer?.id});
+			players.value = extendedPlayers;
+			currentPlayerIndex.value = newCurrentPlayerIndex;
+						
+			await syncGameState();
+		} catch (error) {
+			console.error("Failed to join room:", error);
+			throw error;
+		}
+	}
+
+	async function startGame() {
+		if (!roomId.value || players.value.length < 2) return;
+		
+		gameStarted.value = true;
+
+		engineService.createNewGame(players.value);
+		const gameState = engineService.getGameState();
+
+		const { mutate: initializeGame } = useInitializeGameMutation();
+
+		const params = {
+			roomId: roomId.value,
+			players: players.value,
+			currentPlayerIndex: currentPlayerIndex.value,
+			deckCards: gameState.deck.cards,
+			discardPileCards: gameState.discardPile.cards,
+		};
+
+		engineService.onEnd = () => {
+			const query: Record<string, string | number> = {};
+			players.value.forEach((player) => {
+				query[player.name] = engineService.getPlayerScore(player.index) ?? 0;
+			});
+			router.push({ path: "/over", query });
+
+			//TODO: Handle end of game
+		};
+
+		await initializeGame({ gameInput: toGraphQLInitialGameInput(params) });
+	}
+
+	async function createRoom() {
+		const { mutate: createRoomMutation } = useCreateRoomMutation();
+		
+		try {
+			const result = await createRoomMutation();
+			const room = result?.data?.createRoom;
+			
+			if (!room) {
+				throw new Error("Failed to create room");
+			}
+			
+			// Update local state
+			const { players: extendedPlayers, currentPlayerIndex: newCurrentPlayerIndex } = fromGraphQLRoom({
+				players: room.players ?? [], 
+				currentPlayerId: room.currentPlayer?.id
+			});
+			
+			players.value = extendedPlayers;
+			currentPlayerIndex.value = newCurrentPlayerIndex;
+			
+			await syncGameState();
+			
+			return room.id;
+		} catch (error) {
+			console.error("Failed to create room:", error);
+			throw error;
+		}
 	}
 
 	return {
-		createGame,
+		startGame,
+		createRoom,
+		joinRoom: joinGameRoom,
+		subscribeToRoomUpdates,
+		unsubscribeFromRoom,
+
+		updateAllPlayerDecks,
+
 		getPlayerScore,
 		isPlayerInTurn,
 		currentPlayerInTurn,
@@ -206,11 +280,11 @@ export const useGameStore = defineStore("game", () => {
 		draw,
 		sayUno,
 		catchUnoFailure,
-		updateAllPlayerDecks,
 		getTargetScore,
+
 		discardPileTopCard: engineService.getDiscardPileTopCard,
 		players,
-		bots,
-		subscribeToRoomUpdates,
+		gameStarted,
+		MAX_PLAYERS,
 	};
 });

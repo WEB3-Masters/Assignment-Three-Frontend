@@ -17,7 +17,9 @@ export class Hand {
   public dealer: number;
   private shuffler?: Shuffler<Card>;
   private cardsPerPlayer?: number;
+  private _drawPileId?: string;
   private _drawPile: Deck;
+  private _discardPileId?: string;
   private _discardPile: Deck;
   private _playerInTurn: number;
   private isReverse: boolean;
@@ -66,6 +68,14 @@ export class Hand {
 
   drawPile(): Deck {
     return this._drawPile;
+  }
+
+  drawPileId(): string | undefined {
+    return this._drawPileId;
+  }
+
+  discardPileId(): string | undefined {
+    return this._discardPileId;
   }
 
   playerInTurn(): number | undefined {
@@ -342,7 +352,7 @@ export class Hand {
     this.shuffle(); // Reshuffle the draw pile
   }
 
-  updateDrawPile(cards: Card[]) {
+  updateDrawPile(cards: Card[], id?: string) {
     // Convert backend cards to local format if needed
     const localCards = cards.map(card => ({
       type: card.type,
@@ -350,9 +360,10 @@ export class Hand {
       number: card.number
     }));
     this._drawPile = new deck.Deck(localCards);
+    this._drawPileId = id;
   }
 
-  updateDiscardPile(cards: Card[]) {
+  updateDiscardPile(cards: Card[], id?: string) {
     // Convert backend cards to local format if needed
     const localCards = cards.map(card => ({
       type: card.type,
@@ -360,6 +371,7 @@ export class Hand {
       number: card.number
     }));
     this._discardPile = new deck.Deck(localCards);
+    this._discardPileId = id;
   }
 }
 

@@ -16,14 +16,13 @@ export type Scalars = {
   Boolean: { input: boolean; output: boolean; }
   Int: { input: number; output: number; }
   Float: { input: number; output: number; }
-  UUID: { input: any; output: any; }
 };
 
 export type Card = {
   __typename?: 'Card';
   color?: Maybe<CardColor>;
   deck?: Maybe<Deck>;
-  id: Scalars['UUID']['output'];
+  id: Scalars['ID']['output'];
   number?: Maybe<Scalars['Int']['output']>;
   type: CardType;
 };
@@ -37,7 +36,7 @@ export enum CardColor {
 
 export type CardInput = {
   color?: InputMaybe<CardColor>;
-  id: Scalars['UUID']['input'];
+  id: Scalars['ID']['input'];
   number?: InputMaybe<Scalars['Int']['input']>;
   type: CardType;
 };
@@ -54,38 +53,64 @@ export enum CardType {
 export type Deck = {
   __typename?: 'Deck';
   cards: Array<Card>;
-  id: Scalars['UUID']['output'];
+  id: Scalars['ID']['output'];
 };
 
 export type DeckInput = {
   cards: Array<CardInput>;
-  id: Scalars['UUID']['input'];
+  id: Scalars['ID']['input'];
+};
+
+export type InitialCardInput = {
+  color?: InputMaybe<CardColor>;
+  number?: InputMaybe<Scalars['Int']['input']>;
+  type: CardType;
+};
+
+export type InitialGameInput = {
+  currentPlayerId?: InputMaybe<Scalars['ID']['input']>;
+  deckCards: Array<InitialCardInput>;
+  pileCards: Array<InitialCardInput>;
+  playerCards: Array<InitialPlayerCardsInput>;
+  roomId: Scalars['ID']['input'];
+  roomState: RoomState;
+};
+
+export type InitialPlayerCardsInput = {
+  cards: Array<InitialCardInput>;
+  playerId: Scalars['ID']['input'];
 };
 
 export type Mutation = {
   __typename?: 'Mutation';
   createRoom: Room;
   deleteRoom?: Maybe<Scalars['Boolean']['output']>;
+  initializeGame: Room;
   joinRoom: Room;
-  loginPlayer?: Maybe<Scalars['String']['output']>;
+  loginPlayer: Player;
   registerPlayer: Player;
   updateRoom: Room;
 };
 
 
 export type MutationCreateRoomArgs = {
-  hostId: Scalars['UUID']['input'];
+  hostId: Scalars['ID']['input'];
 };
 
 
 export type MutationDeleteRoomArgs = {
-  id: Scalars['UUID']['input'];
+  id: Scalars['ID']['input'];
+};
+
+
+export type MutationInitializeGameArgs = {
+  gameInput: InitialGameInput;
 };
 
 
 export type MutationJoinRoomArgs = {
-  playerId: Scalars['UUID']['input'];
-  roomId: Scalars['UUID']['input'];
+  playerId: Scalars['ID']['input'];
+  roomId: Scalars['ID']['input'];
 };
 
 
@@ -108,7 +133,7 @@ export type MutationUpdateRoomArgs = {
 export type Player = {
   __typename?: 'Player';
   cards?: Maybe<Array<Card>>;
-  id: Scalars['UUID']['output'];
+  id: Scalars['ID']['output'];
   password: Scalars['String']['output'];
   room?: Maybe<Room>;
   username: Scalars['String']['output'];
@@ -116,7 +141,7 @@ export type Player = {
 
 export type PlayerInput = {
   cards?: InputMaybe<Array<CardInput>>;
-  id: Scalars['UUID']['input'];
+  id: Scalars['ID']['input'];
 };
 
 export type Query = {
@@ -129,12 +154,12 @@ export type Query = {
 
 
 export type QueryPlayerArgs = {
-  id: Scalars['UUID']['input'];
+  id: Scalars['ID']['input'];
 };
 
 
 export type QueryRoomArgs = {
-  id: Scalars['UUID']['input'];
+  id: Scalars['ID']['input'];
 };
 
 export type Room = {
@@ -142,7 +167,7 @@ export type Room = {
   currentPlayer?: Maybe<Player>;
   deck?: Maybe<Deck>;
   discardPile?: Maybe<Deck>;
-  id: Scalars['UUID']['output'];
+  id: Scalars['ID']['output'];
   players?: Maybe<Array<Player>>;
   roomState?: Maybe<RoomState>;
 };
@@ -151,7 +176,7 @@ export type RoomInput = {
   currentPlayer?: InputMaybe<PlayerInput>;
   deck?: InputMaybe<DeckInput>;
   discardPile?: InputMaybe<DeckInput>;
-  id: Scalars['UUID']['input'];
+  id: Scalars['ID']['input'];
   players?: InputMaybe<Array<PlayerInput>>;
   roomState?: InputMaybe<RoomState>;
 };
@@ -168,7 +193,7 @@ export type Subscription = {
 
 
 export type SubscriptionRoomUpdatedArgs = {
-  roomId: Scalars['UUID']['input'];
+  roomId: Scalars['ID']['input'];
 };
 
 export type LoginPlayerMutationVariables = Exact<{
@@ -177,7 +202,7 @@ export type LoginPlayerMutationVariables = Exact<{
 }>;
 
 
-export type LoginPlayerMutation = { __typename?: 'Mutation', loginPlayer?: string | null };
+export type LoginPlayerMutation = { __typename?: 'Mutation', loginPlayer: { __typename?: 'Player', id: string, username: string } };
 
 export type RegisterPlayerMutationVariables = Exact<{
   username: Scalars['String']['input'];
@@ -185,53 +210,63 @@ export type RegisterPlayerMutationVariables = Exact<{
 }>;
 
 
-export type RegisterPlayerMutation = { __typename?: 'Mutation', registerPlayer: { __typename?: 'Player', id: any, username: string } };
+export type RegisterPlayerMutation = { __typename?: 'Mutation', registerPlayer: { __typename?: 'Player', id: string, username: string } };
 
 export type GetPlayerQueryVariables = Exact<{
-  id: Scalars['UUID']['input'];
+  id: Scalars['ID']['input'];
 }>;
 
 
-export type GetPlayerQuery = { __typename?: 'Query', player?: { __typename?: 'Player', id: any, username: string } | null };
+export type GetPlayerQuery = { __typename?: 'Query', player?: { __typename?: 'Player', id: string, username: string } | null };
 
 export type GetRoomsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetRoomsQuery = { __typename?: 'Query', rooms: Array<{ __typename?: 'Room', id: any, roomState?: RoomState | null, players?: Array<{ __typename?: 'Player', id: any, username: string }> | null, currentPlayer?: { __typename?: 'Player', id: any, username: string } | null }> };
+export type GetRoomsQuery = { __typename?: 'Query', rooms: Array<{ __typename?: 'Room', id: string, roomState?: RoomState | null, players?: Array<{ __typename?: 'Player', id: string, username: string }> | null, currentPlayer?: { __typename?: 'Player', id: string, username: string } | null }> };
 
 export type CreateRoomMutationVariables = Exact<{
-  playerId: Scalars['UUID']['input'];
+  playerId: Scalars['ID']['input'];
 }>;
 
 
-export type CreateRoomMutation = { __typename?: 'Mutation', createRoom: { __typename?: 'Room', id: any } };
+export type CreateRoomMutation = { __typename?: 'Mutation', createRoom: { __typename?: 'Room', id: string, players?: Array<{ __typename?: 'Player', id: string, username: string }> | null, currentPlayer?: { __typename?: 'Player', id: string, username: string } | null } };
 
 export type JoinRoomMutationVariables = Exact<{
-  roomId: Scalars['UUID']['input'];
-  playerId: Scalars['UUID']['input'];
+  roomId: Scalars['ID']['input'];
+  playerId: Scalars['ID']['input'];
 }>;
 
 
-export type JoinRoomMutation = { __typename?: 'Mutation', joinRoom: { __typename?: 'Room', id: any } };
+export type JoinRoomMutation = { __typename?: 'Mutation', joinRoom: { __typename?: 'Room', id: string, roomState?: RoomState | null, players?: Array<{ __typename?: 'Player', id: string, username: string, cards?: Array<{ __typename?: 'Card', id: string, type: CardType, color?: CardColor | null, number?: number | null }> | null }> | null, currentPlayer?: { __typename?: 'Player', id: string } | null, deck?: { __typename?: 'Deck', id: string, cards: Array<{ __typename?: 'Card', id: string, type: CardType, color?: CardColor | null, number?: number | null }> } | null, discardPile?: { __typename?: 'Deck', id: string, cards: Array<{ __typename?: 'Card', id: string, type: CardType, color?: CardColor | null, number?: number | null }> } | null } };
 
 export type UpdateRoomMutationVariables = Exact<{
   room: RoomInput;
 }>;
 
 
-export type UpdateRoomMutation = { __typename?: 'Mutation', updateRoom: { __typename?: 'Room', id: any, roomState?: RoomState | null, players?: Array<{ __typename?: 'Player', id: any, username: string }> | null, currentPlayer?: { __typename?: 'Player', id: any, username: string } | null, deck?: { __typename?: 'Deck', cards: Array<{ __typename?: 'Card', id: any, type: CardType, color?: CardColor | null, number?: number | null }> } | null, discardPile?: { __typename?: 'Deck', cards: Array<{ __typename?: 'Card', id: any, type: CardType, color?: CardColor | null, number?: number | null }> } | null } };
+export type UpdateRoomMutation = { __typename?: 'Mutation', updateRoom: { __typename?: 'Room', id: string, roomState?: RoomState | null, players?: Array<{ __typename?: 'Player', id: string, username: string }> | null, currentPlayer?: { __typename?: 'Player', id: string, username: string } | null, deck?: { __typename?: 'Deck', cards: Array<{ __typename?: 'Card', id: string, type: CardType, color?: CardColor | null, number?: number | null }> } | null, discardPile?: { __typename?: 'Deck', cards: Array<{ __typename?: 'Card', id: string, type: CardType, color?: CardColor | null, number?: number | null }> } | null } };
 
 export type RoomUpdatedSubscriptionVariables = Exact<{
-  roomId: Scalars['UUID']['input'];
+  roomId: Scalars['ID']['input'];
 }>;
 
 
-export type RoomUpdatedSubscription = { __typename?: 'Subscription', roomUpdated?: { __typename?: 'Room', id: any, roomState?: RoomState | null, players?: Array<{ __typename?: 'Player', id: any, username: string, password: string, cards?: Array<{ __typename?: 'Card', id: any, type: CardType, color?: CardColor | null, number?: number | null }> | null }> | null, currentPlayer?: { __typename?: 'Player', id: any, username: string, password: string, cards?: Array<{ __typename?: 'Card', id: any, type: CardType, color?: CardColor | null, number?: number | null }> | null } | null, deck?: { __typename?: 'Deck', id: any, cards: Array<{ __typename?: 'Card', id: any, type: CardType, color?: CardColor | null, number?: number | null }> } | null, discardPile?: { __typename?: 'Deck', id: any, cards: Array<{ __typename?: 'Card', id: any, type: CardType, color?: CardColor | null, number?: number | null }> } | null } | null };
+export type RoomUpdatedSubscription = { __typename?: 'Subscription', roomUpdated?: { __typename?: 'Room', id: string, roomState?: RoomState | null, players?: Array<{ __typename?: 'Player', id: string, username: string, password: string, cards?: Array<{ __typename?: 'Card', id: string, type: CardType, color?: CardColor | null, number?: number | null }> | null }> | null, currentPlayer?: { __typename?: 'Player', id: string, username: string, password: string, cards?: Array<{ __typename?: 'Card', id: string, type: CardType, color?: CardColor | null, number?: number | null }> | null } | null, deck?: { __typename?: 'Deck', id: string, cards: Array<{ __typename?: 'Card', id: string, type: CardType, color?: CardColor | null, number?: number | null }> } | null, discardPile?: { __typename?: 'Deck', id: string, cards: Array<{ __typename?: 'Card', id: string, type: CardType, color?: CardColor | null, number?: number | null }> } | null } | null };
+
+export type InitializeGameMutationVariables = Exact<{
+  gameInput: InitialGameInput;
+}>;
+
+
+export type InitializeGameMutation = { __typename?: 'Mutation', initializeGame: { __typename?: 'Room', id: string, roomState?: RoomState | null, players?: Array<{ __typename?: 'Player', id: string, username: string, cards?: Array<{ __typename?: 'Card', id: string, type: CardType, color?: CardColor | null, number?: number | null }> | null }> | null, currentPlayer?: { __typename?: 'Player', id: string } | null, deck?: { __typename?: 'Deck', id: string, cards: Array<{ __typename?: 'Card', id: string, type: CardType, color?: CardColor | null, number?: number | null }> } | null, discardPile?: { __typename?: 'Deck', id: string, cards: Array<{ __typename?: 'Card', id: string, type: CardType, color?: CardColor | null, number?: number | null }> } | null } };
 
 
 export const LoginPlayerDocument = gql`
     mutation LoginPlayer($username: String!, $password: String!) {
-  loginPlayer(username: $username, password: $password)
+  loginPlayer(username: $username, password: $password) {
+    id
+    username
+  }
 }
     `;
 
@@ -289,7 +324,7 @@ export function useRegisterPlayerMutation(options: VueApolloComposable.UseMutati
 }
 export type RegisterPlayerMutationCompositionFunctionResult = VueApolloComposable.UseMutationReturn<RegisterPlayerMutation, RegisterPlayerMutationVariables>;
 export const GetPlayerDocument = gql`
-    query GetPlayer($id: UUID!) {
+    query GetPlayer($id: ID!) {
   player(id: $id) {
     id
     username
@@ -356,9 +391,17 @@ export function useGetRoomsLazyQuery(options: VueApolloComposable.UseQueryOption
 }
 export type GetRoomsQueryCompositionFunctionResult = VueApolloComposable.UseQueryReturn<GetRoomsQuery, GetRoomsQueryVariables>;
 export const CreateRoomDocument = gql`
-    mutation CreateRoom($playerId: UUID!) {
+    mutation CreateRoom($playerId: ID!) {
   createRoom(hostId: $playerId) {
     id
+    players {
+      id
+      username
+    }
+    currentPlayer {
+      id
+      username
+    }
   }
 }
     `;
@@ -385,9 +428,41 @@ export function useCreateRoomMutation(options: VueApolloComposable.UseMutationOp
 }
 export type CreateRoomMutationCompositionFunctionResult = VueApolloComposable.UseMutationReturn<CreateRoomMutation, CreateRoomMutationVariables>;
 export const JoinRoomDocument = gql`
-    mutation JoinRoom($roomId: UUID!, $playerId: UUID!) {
+    mutation JoinRoom($roomId: ID!, $playerId: ID!) {
   joinRoom(roomId: $roomId, playerId: $playerId) {
     id
+    players {
+      id
+      username
+      cards {
+        id
+        type
+        color
+        number
+      }
+    }
+    currentPlayer {
+      id
+    }
+    roomState
+    deck {
+      id
+      cards {
+        id
+        type
+        color
+        number
+      }
+    }
+    discardPile {
+      id
+      cards {
+        id
+        type
+        color
+        number
+      }
+    }
   }
 }
     `;
@@ -469,7 +544,7 @@ export function useUpdateRoomMutation(options: VueApolloComposable.UseMutationOp
 }
 export type UpdateRoomMutationCompositionFunctionResult = VueApolloComposable.UseMutationReturn<UpdateRoomMutation, UpdateRoomMutationVariables>;
 export const RoomUpdatedDocument = gql`
-    subscription RoomUpdated($roomId: UUID!) {
+    subscription RoomUpdated($roomId: ID!) {
   roomUpdated(roomId: $roomId) {
     id
     roomState
@@ -536,3 +611,64 @@ export function useRoomUpdatedSubscription(variables: RoomUpdatedSubscriptionVar
   return VueApolloComposable.useSubscription<RoomUpdatedSubscription, RoomUpdatedSubscriptionVariables>(RoomUpdatedDocument, variables, options);
 }
 export type RoomUpdatedSubscriptionCompositionFunctionResult = VueApolloComposable.UseSubscriptionReturn<RoomUpdatedSubscription, RoomUpdatedSubscriptionVariables>;
+export const InitializeGameDocument = gql`
+    mutation InitializeGame($gameInput: InitialGameInput!) {
+  initializeGame(gameInput: $gameInput) {
+    id
+    roomState
+    players {
+      id
+      username
+      cards {
+        id
+        type
+        color
+        number
+      }
+    }
+    currentPlayer {
+      id
+    }
+    deck {
+      id
+      cards {
+        id
+        type
+        color
+        number
+      }
+    }
+    discardPile {
+      id
+      cards {
+        id
+        type
+        color
+        number
+      }
+    }
+  }
+}
+    `;
+
+/**
+ * __useInitializeGameMutation__
+ *
+ * To run a mutation, you first call `useInitializeGameMutation` within a Vue component and pass it any options that fit your needs.
+ * When your component renders, `useInitializeGameMutation` returns an object that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - Several other properties: https://v4.apollo.vuejs.org/api/use-mutation.html#return
+ *
+ * @param options that will be passed into the mutation, supported options are listed on: https://v4.apollo.vuejs.org/guide-composable/mutation.html#options;
+ *
+ * @example
+ * const { mutate, loading, error, onDone } = useInitializeGameMutation({
+ *   variables: {
+ *     gameInput: // value for 'gameInput'
+ *   },
+ * });
+ */
+export function useInitializeGameMutation(options: VueApolloComposable.UseMutationOptions<InitializeGameMutation, InitializeGameMutationVariables> | ReactiveFunction<VueApolloComposable.UseMutationOptions<InitializeGameMutation, InitializeGameMutationVariables>> = {}) {
+  return VueApolloComposable.useMutation<InitializeGameMutation, InitializeGameMutationVariables>(InitializeGameDocument, options);
+}
+export type InitializeGameMutationCompositionFunctionResult = VueApolloComposable.UseMutationReturn<InitializeGameMutation, InitializeGameMutationVariables>;

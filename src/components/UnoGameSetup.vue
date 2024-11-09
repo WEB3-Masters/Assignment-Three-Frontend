@@ -1,68 +1,124 @@
 <template>
   <div class="uno-game-setup">
-    <div>
-      <h1>Games</h1>
+    <div class="header">
+      <h1>Uno Game Rooms</h1>
     </div>
-    <div class="game-setup">
+    <div class="game-container">
       <div class="game-component">
-        <NewGame @create-game="addGame"/>
-      </div>
-      <div class="game-component">
-        <GameList :games="games" @select-game="selectGame"/>
+        <button @click="createNewRoom" class="create-room-btn">
+          <span class="btn-text">Create New Room</span>
+        </button>
+        <GameList :games="games" @select-game="joinGame"/>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import NewGame from './NewGame.vue';
+import { ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import GameList from './GameList.vue';
+import { useGameStore } from '../stores/GameStore';
 
-const games = ref([
-    { id: 1, hostname: 'Game1', playerCount: 3, status: 'Active' },
-    { id: 2, hostname: 'Game2', playerCount: 2, status: 'Inactive' },
-    { id: 3, hostname: 'Game3', playerCount: 5, status: 'Active' },
-    // Add more game objects as needed
-]);
+const router = useRouter();
+const gameStore = useGameStore();
+const games = ref([]);
 
-const selectedGameId = ref(null);
-
-function selectGame(gameId){
-  selectedGameId.value = gameId;
+async function createNewRoom() {
+  try {
+    let playerId = localStorage.getItem('playerId');
+    if (!playerId) {
+      alert('Please log in first');
+      router.push('/');
+      return;
+    }
+    const roomId = await gameStore.createRoom();
+    if (roomId) {
+      await gameStore.joinRoom(roomId, playerId);
+      router.push(`/play/${roomId}`);
+    }
+  } catch (error) {
+    console.error('Failed to create room:', error);
+  }
 }
 
-function addGame(newGame){
-  games.value.push(newGame);
+async function joinGame(roomId: string) {
+  try {
+    let playerId = localStorage.getItem('playerId');
+    if (!playerId) {
+      alert('Please log in first');
+      router.push('/');
+      return;
+    }
+    
+    await gameStore.joinRoom(roomId, playerId);
+    router.push(`/play/${roomId}`);
+  } catch (error) {
+    console.error('Failed to join room:', error);
+  }
 }
-
 </script>
 
-<style>
-.h1 {
-  font-size: 40px;
+<style scoped>
+h1 {
+  font-size: 2.5rem;
+  color: #61dafb;
+  text-align: center;
+  margin-bottom: 2rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .uno-game-setup {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  padding: 2rem;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
 }
 
-.game-setup {
-  display: flex;
-  flex-direction: row;
+.game-container {
+  width: 100%;
   max-width: 800px;
-  width: 100%; /* Change to 100% for responsive design */
-  justify-content: space-between; /* Space out the child components */
 }
 
 .game-component {
-  width: 400px; /* Fixed width for both components */
-  max-height: 100vh; /* Fixed height for both components */
-  margin: 10px; /* Margin between components */
-  overflow-y: auto;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+.create-room-btn {
+  width: 100%;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  background: linear-gradient(45deg, #4CAF50, #45a049);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1.2rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+}
+
+.create-room-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+  background: linear-gradient(45deg, #45a049, #4CAF50);
+}
+
+.create-room-btn:active {
+  transform: translateY(1px);
+}
+
+.btn-text {
+  display: inline-block;
+  transform: translateY(1px);
+}
 </style>

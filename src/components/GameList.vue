@@ -15,7 +15,7 @@
                             {{ room.roomState }}
                         </span>
                         <div class="players">
-                            <span>Players: {{ room.players?.length || 0 }}</span>
+                            <span>Players: {{ room.players?.length || 0 }}/{{ gameStore.MAX_PLAYERS }}</span>
                             <div class="player-list">
                                 <div v-for="player in room.players" :key="player.id">
                                     {{ player.username }}
@@ -25,10 +25,10 @@
                         </div>
                     </div>
                     <button 
-                        @click="joinRoom(room.id)"
-                        :disabled="room.roomState === 'IN_PROGRESS'"
+                        @click="handleJoinRoom(room.id)"
+                        :disabled="isRoomUnavailable(room)"
                     >
-                        Join Game
+                        {{ getJoinButtonText(room) }}
                     </button>
                 </div>
                 <div v-if="rooms.length === 0" class="no-rooms">
@@ -40,18 +40,47 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
-import { useGetRoomsQuery, useRoomUpdatedSubscription } from '../generated/graphql';
+import { computed, ref } from 'vue';
+import { useGetRoomsQuery, RoomState, Room } from '../generated/graphql';
 import { useRouter } from 'vue-router';
+import { useGameStore } from '../stores/GameStore';
 
 const router = useRouter();
+const gameStore = useGameStore();
 const { result, loading, error } = useGetRoomsQuery();
+const joining = ref(false);
 
 const rooms = computed(() => result.value?.rooms || []);
 
-function joinRoom(roomId: string) {
-    // TODO: Implement join room mutation
-    router.push(`/game/${roomId}`);
+function isRoomUnavailable(room: any) {
+    return room.roomState === RoomState.InProgress || 
+           joining.value || 
+           (room.players?.length || 0) >= gameStore.MAX_PLAYERS;
+}
+
+function getJoinButtonText(room: any) {
+    if (joining.value) return 'Joining...';
+    if (room.roomState === RoomState.InProgress) return 'Game in Progress';
+    if ((room.players?.length || 0) >= gameStore.MAX_PLAYERS) return 'Full';
+    return 'Join Game';
+}
+
+async function handleJoinRoom(roomId: string) {
+    try {
+        const playerId = localStorage.getItem('playerId');
+        if (!playerId) {
+            throw new Error('Player ID not found');
+        }
+
+        joining.value = true;
+        await gameStore.joinRoom(roomId, playerId);
+        router.push(`/game/${roomId}`);
+    } catch (error: any) {
+        console.error('Failed to join room:', error);
+        alert(error.message || 'Failed to join game room. Please try again.');
+    } finally {
+        joining.value = false;
+    }
 }
 </script>
 
@@ -95,6 +124,8 @@ h2 {
     border-radius: 4px;
     font-size: 0.9em;
     margin-bottom: 8px;
+    text-transform: capitalize;
+    font-weight: bold;
 }
 
 .room-status.waiting {
@@ -103,6 +134,7 @@ h2 {
 
 .room-status.in_progress {
     background: #FFC107;
+    color: #000;
 }
 
 .players {
@@ -133,6 +165,12 @@ button:hover:not(:disabled) {
 button:disabled {
     background: #cccccc;
     cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.joining {
+    opacity: 0.7;
+    cursor: wait;
 }
 
 .loading, .error, .no-rooms {

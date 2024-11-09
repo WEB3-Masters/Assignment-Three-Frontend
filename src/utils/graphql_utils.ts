@@ -1,13 +1,11 @@
-import { Card as LocalCard, CardColor as LocalCardColor, CardType as LocalCardType } from "../model/deck";
-import { CardInput, CardColor, Room, Card as GraphQLCard, RoomState } from "../generated/graphql";
+import { Card, Card as LocalCard, CardColor as LocalCardColor, CardType as LocalCardType } from "../model/deck";
+import { CardInput, CardColor, Room, Card as GraphQLCard, RoomState, Player } from "../generated/graphql";
 import { CardType } from "../generated/graphql";
-import type { Player } from "../model/interfaces/engineInterface";
-import type { Difficulty } from "../model/BotAI";
 
-export interface ExtendedPlayer extends Player { 
-    isBot: boolean; 
+export interface ExtendedPlayer extends Pick<Player, 'id' | 'room'> {
     hand: LocalCard[]; 
-    difficulty?: Difficulty;
+    name: string;
+    index: number;
 }
 
 // Convert local card type to GraphQL input type
@@ -38,34 +36,24 @@ export function fromGraphQLCards(cards: GraphQLCard[]): LocalCard[] {
 }
 
 // Convert GraphQL Room type to game state
-export function fromGraphQLRoom(room: Room): {
-    players: Player[];
+export function fromGraphQLRoom({players, currentPlayerId}: {players: Pick<Player, 'id' | 'username' | 'cards'>[], currentPlayerId: string | undefined}): {
     currentPlayerIndex: number;
-    extendedPlayers: ExtendedPlayer[];
+    players: ExtendedPlayer[];
 } {
-    const players = room.players?.map((player, index) => ({
-        id: player.id,
-        name: player.username,
-        index
-    })) ?? [];
-
-    const currentPlayerIndex = players.findIndex(p => 
-        p.id === room.currentPlayer?.id
-    );
-
-    const extendedPlayers = room.players?.map((player, index) => ({
+    const local_players : ExtendedPlayer[] = players?.map((player, index) => ({
         id: player.id,
         name: player.username,
         index,
-        isBot: player.username.includes('bot'),
         hand: player.cards ? fromGraphQLCards(player.cards) : [],
-        difficulty: undefined  // This should be set by the game store
     })) ?? [];
 
+    const currentPlayerIndex = players.findIndex(p => 
+        p.id === currentPlayerId
+    );
+
     return {
-        players,
         currentPlayerIndex: currentPlayerIndex !== -1 ? currentPlayerIndex : 0,
-        extendedPlayers
+        players: local_players
     };
 }
 
@@ -75,10 +63,12 @@ export function toGraphQLRoomInput(params: {
     players: ExtendedPlayer[],
     currentPlayerIndex: number,
     deckCards: LocalCard[],
+    deckId?: string,
     discardPileCards: LocalCard[],
-    hasEnded: boolean
+    discardPileId?: string,
+    roomState: RoomState | null
 }) {
-    const { roomId, players, currentPlayerIndex, deckCards, discardPileCards, hasEnded } = params;
+    const { roomId, players, currentPlayerIndex, deckCards, discardPileCards, deckId, discardPileId, roomState } = params;
     
     return {
         room: {
@@ -86,15 +76,15 @@ export function toGraphQLRoomInput(params: {
             currentPlayer: players[currentPlayerIndex] 
                 ? { id: players[currentPlayerIndex].id }
                 : undefined,
-            deck: {
-                id: roomId + "_deck",
+            deck: deckId ? {
+                id: deckId,
                 cards: toGraphQLCards(deckCards)
-            },
-            discardPile: {
-                id: roomId + "_discard",
+            } : undefined,
+            discardPile: discardPileId ? {
+                id: discardPileId,
                 cards: toGraphQLCards(discardPileCards)
-            },
-            roomState: hasEnded ? RoomState.Waiting : RoomState.InProgress,
+            } : undefined,
+            roomState: roomState, 
             players: players.map(p => ({
                 id: p.id,
                 cards: toGraphQLCards(p.hand)
@@ -142,4 +132,30 @@ function fromGraphQLCardColor(color: CardColor): LocalCardColor {
         case CardColor.Red: return "RED";
         case CardColor.Yellow: return "YELLOW";
     }
+}
+
+export function toGraphQLInitialGameInput(params: {
+    roomId: string,
+    players: ExtendedPlayer[],
+    currentPlayerIndex: number,
+    deckCards: Card[],
+    discardPileCards: Card[],
+}) {
+    const mapCardToInitialInput = (card: Card) => ({
+        type: toGraphQLCardType(card.type),
+        color: card.color ? toGraphQLCardColor(card.color) : undefined,
+        number: card.number ?? undefined
+    });
+
+    return {
+        roomId: params.roomId,
+        roomState: RoomState.InProgress,
+        currentPlayerId: params.players[params.currentPlayerIndex].id,
+        deckCards: params.deckCards.map(mapCardToInitialInput),
+        pileCards: params.discardPileCards.map(mapCardToInitialInput),
+        playerCards: params.players.map(player => ({
+            playerId: player.id,
+            cards: player.hand.map(mapCardToInitialInput)
+        }))
+    };
 }

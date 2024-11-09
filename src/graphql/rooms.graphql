@@ -13,15 +13,55 @@ query GetRooms {
   }
 } 
 
-mutation CreateRoom($playerId: UUID!) {
+mutation CreateRoom($playerId: ID!) {
   createRoom(hostId: $playerId) {
     id
+    players {
+      id
+      username
+    }
+    currentPlayer {
+      id
+      username
+    }
   }
 }
 
-mutation JoinRoom($roomId: UUID!, $playerId: UUID!) {
-  joinRoom(roomId: $roomId, playerId: $playerId){
+mutation JoinRoom($roomId: ID!, $playerId: ID!) {
+  joinRoom(roomId: $roomId, playerId: $playerId) {
     id
+    players {
+      id
+      username
+      cards {
+        id
+        type
+        color
+        number
+      }
+    }
+    currentPlayer {
+      id
+    }
+    roomState
+    deck {
+      id
+      cards {
+        id
+        type
+        color
+        number
+      }
+    }
+    discardPile {
+      id
+      cards {
+        id
+        type
+        color
+        number
+      }
+    }
   }
 }
 
@@ -56,7 +96,7 @@ mutation UpdateRoom($room: RoomInput!) {
   }
 } 
 
-subscription RoomUpdated($roomId: UUID!) {
+subscription RoomUpdated($roomId: ID!) {
   roomUpdated(roomId: $roomId) {
     id
     roomState
@@ -81,6 +121,44 @@ subscription RoomUpdated($roomId: UUID!) {
         color
         number
       }
+    }
+    deck {
+      id
+      cards {
+        id
+        type
+        color
+        number
+      }
+    }
+    discardPile {
+      id
+      cards {
+        id
+        type
+        color
+        number
+      }
+    }
+  }
+}
+
+mutation InitializeGame($gameInput: InitialGameInput!) {
+  initializeGame(gameInput: $gameInput) {
+    id
+    roomState
+    players {
+      id
+      username
+      cards {
+        id
+        type
+        color
+        number
+      }
+    }
+    currentPlayer {
+      id
     }
     deck {
       id

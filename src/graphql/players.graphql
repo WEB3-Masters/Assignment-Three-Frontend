@@ -1,5 +1,5 @@
 
-query GetPlayer($id: UUID!) {
+query GetPlayer($id: ID!) {
     player(id: $id) {
         id
         username

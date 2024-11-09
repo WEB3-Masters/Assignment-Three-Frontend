@@ -27,19 +27,16 @@ export class Game {
 		if (this.props.randomize !== undefined) randomNumber = this.props.randomize();
 		else randomNumber = standardRandomizer(this.props.players?.length ?? 2);
 
-		const defaultPlayers: Player[] = [
-			{ id: "A", name: "A", index: 0 },
-			{ id: "B", name: "B", index: 1 }
-		];
+		if(this.props.players) {
+			this.hand = createHand(
+				this.props.players,
+				randomNumber,
+				this.props.shuffler,
+				this.props.cardsPerPlayer
+			);
+		}
 
-		this.hand = createHand(
-			this.props.players ?? defaultPlayers,
-			randomNumber,
-			this.props.shuffler,
-			this.props.cardsPerPlayer
-		);
-
-		this.hand.onEnd(() => this.onEnd());
+		this.hand?.onEnd(() => this.onEnd());
 
 		if ((createGame.targetScore ?? 500) <= 0) throw Error("Target score must be bigger then 0!");
 

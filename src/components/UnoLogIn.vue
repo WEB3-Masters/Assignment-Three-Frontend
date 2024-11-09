@@ -100,8 +100,8 @@ async function logIn() {
             password: loginPassword.value
         });
         
-        if (response?.data?.loginPlayer) {
-            localStorage.setItem('token', response.data.loginPlayer);
+        if (response?.data?.loginPlayer?.id) {
+            localStorage.setItem('playerId', response.data.loginPlayer.id);
             router.push("/setup");
         }
     } catch (error) {
@@ -123,8 +123,8 @@ async function signUp() {
                 password: signupPassword.value
             });
             
-            if (loginResponse?.data?.loginPlayer) {
-                localStorage.setItem('token', loginResponse.data.loginPlayer);
+            if (loginResponse?.data?.loginPlayer?.id) {
+                localStorage.setItem('playerId', loginResponse.data.loginPlayer.id);
                 router.push("/setup");
             }
         }
