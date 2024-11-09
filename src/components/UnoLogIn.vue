@@ -102,6 +102,7 @@ async function logIn() {
         
         if (response?.data?.loginPlayer?.id) {
             localStorage.setItem('playerId', response.data.loginPlayer.id);
+            localStorage.setItem('username', loginUsername.value);
             router.push("/setup");
         }
     } catch (error) {
@@ -125,6 +126,7 @@ async function signUp() {
             
             if (loginResponse?.data?.loginPlayer?.id) {
                 localStorage.setItem('playerId', loginResponse.data.loginPlayer.id);
+                localStorage.setItem('username', signupUsername.value);
                 router.push("/setup");
             }
         }

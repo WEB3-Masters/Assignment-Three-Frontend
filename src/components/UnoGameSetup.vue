@@ -1,11 +1,19 @@
 <template>
   <div class="uno-game-setup">
+    <div class="user-info">
+      <span v-if="username" class="username">
+        Logged in as: {{ username }}
+      </span>
+      <span v-else class="not-logged">
+        Not logged in
+      </span>
+    </div>
     <div class="header">
       <h1>Uno Game Rooms</h1>
     </div>
     <div class="game-container">
       <div class="game-component">
-        <button @click="createNewRoom" class="create-room-btn">
+        <button @click="createNewRoom" class="create-room-btn" :disabled="!username">
           <span class="btn-text">Create New Room</span>
         </button>
         <GameList :games="games" @select-game="joinGame"/>
@@ -23,6 +31,7 @@ import { useGameStore } from '../stores/GameStore';
 const router = useRouter();
 const gameStore = useGameStore();
 const games = ref([]);
+const username = ref(localStorage.getItem('username'));
 
 async function createNewRoom() {
   try {
@@ -120,5 +129,32 @@ h1 {
 .btn-text {
   display: inline-block;
   transform: translateY(1px);
+}
+
+.user-info {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  backdrop-filter: blur(5px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.username {
+  color: #61dafb;
+  font-weight: 500;
+}
+
+.not-logged {
+  color: #ff4444;
+}
+
+/* Make sure the header has relative positioning to not conflict with absolute user-info */
+.header {
+  position: relative;
+  width: 100%;
+  text-align: center;
 }
 </style>
