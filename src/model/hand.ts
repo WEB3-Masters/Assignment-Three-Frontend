@@ -374,6 +374,13 @@ export class Hand {
     this._discardPile = new deck.Deck(localCards);
     this._discardPileId = id;
   }
+
+  updatePlayerHand(playerIndex: number, cards: Card[]) {
+    if (playerIndex < 0 || playerIndex >= this.playerHands.length) {
+        throw new Error("Player index out of bounds");
+    }
+    this.playerHands[playerIndex] = [...cards];
+  }
 }
 
 export function createHand(

@@ -43,7 +43,10 @@ export const useGameStore = defineStore("game", () => {
 
 			roomId.value = room.id;
 
-			const { players:extendedPlayers, currentPlayerIndex: newCurrentPlayerIndex } = fromGraphQLRoom({players: room.players ?? [], currentPlayerId: room.currentPlayer?.id});
+			const { players: extendedPlayers, currentPlayerIndex: newCurrentPlayerIndex } = fromGraphQLRoom({
+				players: room.players ?? [], 
+				currentPlayerId: room.currentPlayer?.id
+			});
 
 			players.value = extendedPlayers;
 			currentPlayerIndex.value = newCurrentPlayerIndex;
@@ -77,7 +80,7 @@ export const useGameStore = defineStore("game", () => {
 		const params = {
 			roomId: roomId.value,
 			players: players.value,
-			currentPlayerIndex: currentPlayerIndex.value - 1, //-1 because graphql is 0-indexed
+			currentPlayerIndex: currentPlayerIndex.value - 1,
 			deckCards: gameState.deck.cards,
 			deckId: gameState.deck.id,
 			discardPileCards: gameState.discardPile.cards,
@@ -85,16 +88,10 @@ export const useGameStore = defineStore("game", () => {
 			roomState: gameState.hasEnded ? null : gameStarted.value ? RoomState.InProgress : RoomState.Waiting 
 		};
 
-		console.log("Syncing game params", gameState);
-
 		if(!gameState.hasEnded) {
-			console.log("Syncing game state - graphql", toGraphQLRoomInput(params));
 			await updateRoom(toGraphQLRoomInput(params));
+			updateAllPlayerDecks();
 		}
-		else{
-			//TODO: Handle end of game
-		}
-
 	}
 
 	async function play(cardIndex: number, nextColor?: CardColor) {
@@ -107,6 +104,7 @@ export const useGameStore = defineStore("game", () => {
 			updateAllPlayerDecks();
 			nextTurn();
 			await syncGameState();
+			updateAllPlayerDecks();
 			return playedCard;
 		} catch (error) {
 			console.error("Error playing card:", error);
@@ -122,6 +120,7 @@ export const useGameStore = defineStore("game", () => {
 		engineService.draw();
 		updateAllPlayerDecks();
 		nextTurn();
+		syncGameState();
 	}
 
 	function getPlayerScore(index: number): number {
