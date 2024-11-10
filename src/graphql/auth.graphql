@@ -1,0 +1,13 @@
+mutation LoginPlayer($username: String!, $password: String!) {
+  loginPlayer(username: $username, password: $password){
+    id
+    username
+  }
+} 
+
+mutation RegisterPlayer($username: String!, $password: String!) {
+  registerPlayer(username: $username, password: $password) {
+    id
+    username
+  }
+}

@@ -18,9 +18,10 @@ const router = createRouter({
         name:'Setup', 
         component:UnoGameSetup
     },
-    {   path:'/game',
+    {   path:'/game/:roomId',
         name:'Game', 
         component:UnoGamePlay, 
+        props: true
     },
     {
         path: "/over",

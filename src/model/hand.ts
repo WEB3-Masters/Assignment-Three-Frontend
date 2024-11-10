@@ -1,5 +1,7 @@
 import { type Shuffler, standardShuffler, swapObjects } from "../utils/random_utils";
 import * as deck from "../../src/model/deck";
+import type { Card, CardColor, Deck } from "./deck";
+import type { Player } from "./interfaces/engineInterface";
 
 export type UnoFailure = {
   accuser: number;
@@ -9,21 +11,23 @@ export type UnoFailure = {
 type EndCallback = (event: { winner: number }) => void;
 
 export class Hand {
-  private players: string[];
-  private playerHands: deck.Card[][];
+  private players: Player[];
+  private playerHands: Card[][];
   private playerUnos: boolean[];
   public dealer: number;
-  private shuffler?: Shuffler<deck.Card>;
+  private shuffler?: Shuffler<Card>;
   private cardsPerPlayer?: number;
-  private _drawPile: deck.Deck;
-  private _discardPile: deck.Deck;
+  private _drawPileId?: string;
+  private _drawPile: Deck;
+  private _discardPileId?: string;
+  private _discardPile: Deck;
   private _playerInTurn: number;
   private isReverse: boolean;
-  private selectedColor?: deck.CardColor;
+  private selectedColor?: CardColor;
   private _score?: number;
   public endCallbacks: EndCallback[] = [];
 
-  constructor(players: string[], dealer: number, shuffler?: Shuffler<deck.Card>, cardsPerPlayer?: number) {
+  constructor(players: Player[], dealer: number, shuffler?: Shuffler<Card>, cardsPerPlayer?: number) {
     if (players.length < 2) throw new Error("Not enough player");
     if (players.length > 10) throw new Error("To many players");
     this.players = players;
@@ -46,24 +50,32 @@ export class Hand {
     this.nextPlayer();
   }
 
-  player(index: number): string {
+  player(index: number): Player | undefined {
     if (index < 0) throw new Error("Player index out of bounds");
     if (index >= this.players.length) throw new Error("Player index out of bounds");
     return this.players[index];
   }
 
-  playerHand(index: number): deck.Card[] {
+  playerHand(index: number): Card[] {
     if (index < 0) throw new Error("Player hand index out of bounds");
     if (index >= this.playerHands.length) throw new Error("Player hand index out of bounds");
     return this.playerHands[index];
   }
 
-  discardPile(): deck.Deck {
+  discardPile(): Deck {
     return this._discardPile;
   }
 
-  drawPile(): deck.Deck {
+  drawPile(): Deck {
     return this._drawPile;
+  }
+
+  drawPileId(): string | undefined {
+    return this._drawPileId;
+  }
+
+  discardPileId(): string | undefined {
+    return this._discardPileId;
   }
 
   playerInTurn(): number | undefined {
@@ -72,7 +84,7 @@ export class Hand {
     return this._playerInTurn;
   }
 
-  play(cardIndex: number, nextColor?: deck.CardColor): deck.Card {
+  play(cardIndex: number, nextColor?: CardColor): Card {
     if (!this.canPlay(cardIndex)) throw new Error("Can not play the card"); // Checks if the move is legal
 
     this.selectedColor = undefined;
@@ -171,9 +183,10 @@ export class Hand {
     this.playerHand(this._playerInTurn).push(card);
     this.playerUnos[this._playerInTurn] = false;
 
-    // Move to a next player if there is no playable cards
-    // Move to a next player if there is no playable cards CHANGED to be only if the drawn card is playable
-    if (!this.canPlay(this.playerHand(this._playerInTurn).length-1)) this.nextPlayer();
+    // Only move to next player if the drawn card cannot be played
+    if (!this.canPlay(this.playerHand(this._playerInTurn).length - 1)) {
+        this.nextPlayer();
+    }
   }
 
   sayUno(playerIndex: number) {
@@ -308,7 +321,7 @@ export class Hand {
     else this._drawPile.shuffle(standardShuffler);
   }
 
-  private handleLogicForSpecialCards(card: deck.Card) {
+  private handleLogicForSpecialCards(card: Card) {
     switch (card.type) {
       case "REVERSE":
         // If there is two players, reverse card acts like a skip card.
@@ -339,12 +352,41 @@ export class Hand {
     if (topDiscardCard) this._discardPile.push(topDiscardCard); // Put back the top card to the discard pile
     this.shuffle(); // Reshuffle the draw pile
   }
+
+  updateDrawPile(cards: Card[], id?: string) {
+    // Convert backend cards to local format if needed
+    const localCards = cards.map(card => ({
+      type: card.type,
+      color: card.color,
+      number: card.number
+    }));
+    this._drawPile = new deck.Deck(localCards);
+    this._drawPileId = id;
+  }
+
+  updateDiscardPile(cards: Card[], id?: string) {
+    // Convert backend cards to local format if needed
+    const localCards = cards.map(card => ({
+      type: card.type,
+      color: card.color,
+      number: card.number
+    }));
+    this._discardPile = new deck.Deck(localCards);
+    this._discardPileId = id;
+  }
+
+  updatePlayerHand(playerIndex: number, cards: Card[]) {
+    if (playerIndex < 0 || playerIndex >= this.playerHands.length) {
+        throw new Error("Player index out of bounds");
+    }
+    this.playerHands[playerIndex] = [...cards];
+  }
 }
 
 export function createHand(
-  players: string[],
+  players: Player[],
   dealer: number,
-  shuffler?: Shuffler<deck.Card>,
+  shuffler?: Shuffler<Card>,
   cardsPerPlayer?: number
 ): Hand {
   const hand = new Hand(players, dealer, shuffler, cardsPerPlayer);

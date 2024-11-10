@@ -1,0 +1,182 @@
+query GetRooms {
+  rooms {
+    id
+    roomState
+    players {
+      id
+      username
+    }
+    currentPlayer {
+      id
+      username
+    }
+  }
+} 
+
+mutation CreateRoom($playerId: ID!) {
+  createRoom(hostId: $playerId) {
+    id
+    players {
+      id
+      username
+    }
+    currentPlayer {
+      id
+      username
+    }
+  }
+}
+
+mutation JoinRoom($roomId: ID!, $playerId: ID!) {
+  joinRoom(roomId: $roomId, playerId: $playerId) {
+    id
+    players {
+      id
+      username
+      cards {
+        id
+        type
+        color
+        number
+      }
+    }
+    currentPlayer {
+      id
+    }
+    roomState
+    deck {
+      id
+      cards {
+        id
+        type
+        color
+        number
+      }
+    }
+    discardPile {
+      id
+      cards {
+        id
+        type
+        color
+        number
+      }
+    }
+  }
+}
+
+mutation UpdateRoom($room: RoomInput!) {
+  updateRoom(room: $room) {
+    id
+    roomState
+    players {
+      id
+      username
+    }
+    currentPlayer {
+      id
+      username
+    }
+    deck {
+      cards {
+        id
+        type
+        color
+        number
+      }
+    }
+    discardPile {
+      cards {
+        id
+        type
+        color
+        number
+      }
+    }
+  }
+} 
+
+subscription RoomUpdated($roomId: ID!) {
+  roomUpdated(roomId: $roomId) {
+    id
+    roomState
+    players {
+      id
+      username
+      password
+      cards {
+        id
+        type
+        color
+        number
+      }
+    }
+    currentPlayer {
+      id
+      username
+      password
+      cards {
+        id
+        type
+        color
+        number
+      }
+    }
+    deck {
+      id
+      cards {
+        id
+        type
+        color
+        number
+      }
+    }
+    discardPile {
+      id
+      cards {
+        id
+        type
+        color
+        number
+      }
+    }
+  }
+}
+
+mutation InitializeGame($gameInput: InitialGameInput!) {
+  initializeGame(gameInput: $gameInput) {
+    id
+    roomState
+    players {
+      id
+      username
+      cards {
+        id
+        type
+        color
+        number
+      }
+    }
+    currentPlayer {
+      id
+    }
+    deck {
+      id
+      cards {
+        id
+        type
+        color
+        number
+      }
+    }
+    discardPile {
+      id
+      cards {
+        id
+        type
+        color
+        number
+      }
+    }
+  }
+}

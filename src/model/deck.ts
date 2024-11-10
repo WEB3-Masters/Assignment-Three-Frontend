@@ -12,8 +12,9 @@ export type CardColor = "BLUE" | "GREEN" | "RED" | "YELLOW";
 export const colors: CardColor[] = ["BLUE", "GREEN", "RED", "YELLOW"];
 
 export interface Card {
+  id?: string;
   type: CardType;
-  color?: CardColor;
+  color: CardColor | undefined;
   number?: number;
 }
 
@@ -71,6 +72,10 @@ export class Deck {
     });
 
     return string;
+  }
+
+  toArray(): Card[] {
+    return [...this.cards];
   }
 }
 

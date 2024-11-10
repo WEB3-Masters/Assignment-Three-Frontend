@@ -1,0 +1,7 @@
+
+query GetPlayer($id: ID!) {
+    player(id: $id) {
+        id
+        username
+    }
+}

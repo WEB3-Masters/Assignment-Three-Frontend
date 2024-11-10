@@ -1,134 +1,303 @@
-import type { Difficulty } from "../model/BotAI";
-import type { Card, CardColor } from "../model/deck";
+import { ExtendedPlayer, toGraphQLRoomInput, fromGraphQLRoom, toGraphQLInitialGameInput } from "../utils/graphql_utils";
 import { EngineService } from "../model/engineService";
-import type { UnoFailure } from "../model/hand";
-import type { EngineInterface, Player } from "../model/interfaces/engineInterface";
+import { UnoFailure } from "../model/hand";
 import { defineStore } from "pinia";
-import { computed, ref } from "vue";
+import { ref } from "vue";
 import { useRouter } from "vue-router";
+import { useRoomUpdatedSubscription, useUpdateRoomMutation, useJoinRoomMutation, RoomState } from "../generated/graphql";
+import { CardColor } from "../model/deck";
+import { useInitializeGameMutation } from "../generated/graphql";
+import { useCreateRoomMutation } from "../generated/graphql";
+import { provideApolloClient } from '@vue/apollo-composable';
+import { apolloClient } from '../apollo'; // Make sure this path is correct
+
+// Provide the Apollo client at the store level
+provideApolloClient(apolloClient);
+
 export const useGameStore = defineStore("game", () => {
-	const players = ref<(Player & { isBot: boolean; deck: Card[]; difficulty?: Difficulty })[]>([]);
-	const bots = computed(() => players.value.filter((player) => player.isBot));
-	const engineService: EngineService = new EngineService();
+	const players = ref<ExtendedPlayer[]>([]);
+	const roomId = ref<string>();
 	const currentPlayerIndex = ref(0);
+	const gameStarted = ref(false);
+	const MAX_PLAYERS = 4;
+
+	const engineService: EngineService = new EngineService();
+
+	let stopSubscription: (() => void) | undefined;
 	const router = useRouter();
-	function createGame(bots: ("easy" | "medium" | "hard")[]) {
-		const _players = engineService.createGame(bots);
-		players.value = _players.map((player, index) => {
-			const isBot = player.name.includes("bot");
-			const difficulty = isBot ? bots[index - 1] : undefined;
-			return {
-				...player,
-				isBot,
-				deck: engineService.getPlayerDeck(player.index) ?? [],
-				difficulty,
-			};
-		});
-		engineService.onEnd = () => {
-			const query: Record<string, string | number> = {};
-			players.value.forEach((player) => {
-				const name = player.name;
-				const score = engineService.getPlayerScore(player.index);
-				query[name] = score ?? 0;
+
+	const { mutate: joinRoom } = useJoinRoomMutation();
+	const { mutate: createRoomMutation } = useCreateRoomMutation();
+
+	function subscribeToRoomUpdates(id: string) {
+		unsubscribeFromRoom();
+		
+		roomId.value = id;
+		const { onResult, onError, stop } = useRoomUpdatedSubscription({ roomId: id });
+		
+		stopSubscription = stop;
+		
+		onResult((result) => {
+			const room = result.data?.roomUpdated;
+			if (!room) return;
+
+			roomId.value = room.id;
+
+			const { players: extendedPlayers, currentPlayerIndex: newCurrentPlayerIndex } = fromGraphQLRoom({
+				players: room.players ?? [], 
+				currentPlayerId: room.currentPlayer?.id
 			});
-			router.push({ path: "/over", query });
-		};
-		nextTurn();
-	}
-	function play(cardIndex: number, nextColor?: CardColor) {
-		try {
-			engineService.play(cardIndex, nextColor);
+
+			players.value = extendedPlayers;
+			currentPlayerIndex.value = newCurrentPlayerIndex;
+
+			if(room.roomState === RoomState.InProgress){
+				gameStarted.value = true;
+			}
+
+			engineService.updateFromRoom(room);
 			updateAllPlayerDecks();
-			nextTurn();
-		} catch {
-			alert("Illegal card play");
+		});
+
+		onError((error) => {
+			console.error('Subscription error:', error);
+		});
+	}
+
+	function unsubscribeFromRoom() {
+		if (stopSubscription) {
+			stopSubscription();
+			stopSubscription = undefined;
 		}
 	}
+
+	const { mutate: updateRoom } = useUpdateRoomMutation();
+
+	async function syncGameState() {
+		if (!roomId.value) return;
+
+		const gameState = engineService.getGameState();
+		const params = {
+			roomId: roomId.value,
+			players: players.value,
+			currentPlayerIndex: currentPlayerIndex.value - 1,
+			deckCards: gameState.deck.cards,
+			deckId: gameState.deck.id,
+			discardPileCards: gameState.discardPile.cards,
+			discardPileId: gameState.discardPile.id,
+			roomState: gameState.hasEnded ? null : gameStarted.value ? RoomState.InProgress : RoomState.Waiting 
+		};
+
+		if(!gameState.hasEnded) {
+			await updateRoom(toGraphQLRoomInput(params));
+			updateAllPlayerDecks();
+		}
+	}
+
+	async function play(cardIndex: number, nextColor?: CardColor) {
+		try {
+			if (!gameStarted.value) {
+				throw new Error("Game hasn't started yet");
+			}
+			
+			const playedCard = engineService.play(cardIndex, nextColor);
+			updateAllPlayerDecks();
+			nextTurn();
+			await syncGameState();
+			updateAllPlayerDecks();
+			return playedCard;
+		} catch (error) {
+			console.error("Error playing card:", error);
+			alert(error instanceof Error ? error.message : "Illegal card play");
+		}
+	}
+
 	function canPlay(cardIndex: number) {
 		return engineService.canPlay(cardIndex);
 	}
+
 	function draw() {
 		engineService.draw();
 		updateAllPlayerDecks();
 		nextTurn();
+		syncGameState();
 	}
+
 	function getPlayerScore(index: number): number {
 		return engineService.getPlayerScore(index) ?? 0;
 	}
+
 	function isPlayerInTurn(index: number): boolean {
 		return index === currentPlayerIndex.value;
 	}
+
 	function currentPlayerInTurn(): number {
-		return currentPlayerIndex.value+1;
+		return currentPlayerIndex.value + 1;
 	}
+
 	function sayUno(index: number) {
 		engineService.sayUno(index);
 		updateAllPlayerDecks();
 	}
+
 	function catchUnoFailure(unoFailure: UnoFailure) {
 		engineService.catchUnoFailure(unoFailure);
 	}
+
 	function getTargetScore() {
 		return engineService.getTargetScore();
 	}
-	function makeBotMove() {
-		setTimeout(() => {
-			engineService.decideMove();
-			updateAllPlayerDecks();
-			nextTurn();
-		}, 2500);
-	}
-	function nextTurn() {
-		currentPlayerIndex.value = engineService.getCurrentPlayer().index;
-		const currentPlayer = players.value[currentPlayerIndex.value];
-		checkForUnoFailure().then(() => {
-			if (currentPlayer?.isBot) {
-				makeBotMove();
-			}
-		});
-	}
-	async function checkForUnoFailure() {
+
+	//TODO: If we want to add saying uno, we need to add some logic here
+	/*async function checkForUnoFailure() {
 		const delayBetweenChecks = 500;
 		for (const bot of players.value) {
 			if (!bot.isBot) continue;
 			for (const otherPlayer of players.value) {
-				if (bot === otherPlayer || otherPlayer.deck.length !== 1) continue;
+				if (bot === otherPlayer || otherPlayer.hand.length !== 1) continue;
 				let catchProbability = 0;
 				let delay = 0;
 				switch (bot.difficulty) {
 					case "easy":
-						catchProbability = 0.2; // 20% chance to catch failure
-						delay = Math.random() * 2000 + 2000; // 2 to 4 seconds delay
+						catchProbability = 0.2;
+						delay = Math.random() * 2000 + 2000;
 						break;
 					case "medium":
-						catchProbability = 0.5; // 50% chance to catch failure
-						delay = Math.random() * 1500 + 1000; // 1 to 2.5 seconds delay
+						catchProbability = 0.5;
+						delay = Math.random() * 1500 + 1000;
 						break;
 					case "hard":
-						catchProbability = 0.8; // 80% chance to catch failure
-						delay = Math.random() * 1000 + 500; // 0.5 to 1.5 seconds delay
+						catchProbability = 0.8;
+						delay = Math.random() * 1000 + 500;
 						break;
 				}
 				if (Math.random() < catchProbability) {
 					await new Promise((resolve) => setTimeout(resolve, delay));
-					const isCaught = engineService.catchUnoFailure({ accused: otherPlayer.index, accuser: bot.index });
+					const isCaught = engineService.catchUnoFailure({ 
+						accused: otherPlayer.index, 
+						accuser: bot.index 
+					});
 					if (isCaught) {
-						alert(`Bot ${bot.index} caught ${otherPlayer.name} ${otherPlayer.index} for not saying Uno!`);
+						alert(`Bot ${bot.index} caught ${otherPlayer.name} for not saying Uno!`);
 						updateAllPlayerDecks();
 					}
 				}
 			}
-			// Introduce a small delay between bots checking to simulate realistic behavior
 			await new Promise((resolve) => setTimeout(resolve, delayBetweenChecks));
 		}
-	}
+	}*/
+
 	function updateAllPlayerDecks() {
 		players.value.forEach((player) => {
-			player.deck = engineService.getPlayerDeck(player.index) ?? [];
+			player.hand = engineService.getPlayerDeck(player.index) ?? [];
 		});
 	}
+
+	async function nextTurn() {
+		currentPlayerIndex.value = (engineService.getCurrentPlayer()?.index ?? 0) + 1;
+		await syncGameState();
+		//checkForUnoFailure();
+	}
+
+	async function joinGameRoom(roomId: string, playerId: string) {
+		try {
+			const result = await joinRoom({ roomId, playerId: playerId});
+			const room = result?.data?.joinRoom;
+			
+			if (!room) {
+				throw new Error("Failed to join room");
+			}
+
+			subscribeToRoomUpdates(roomId);
+
+			const { players: extendedPlayers, currentPlayerIndex: newCurrentPlayerIndex } = fromGraphQLRoom({
+				players: room.players ?? [], 
+				currentPlayerId: room.currentPlayer?.id
+			});
+			
+			players.value = extendedPlayers;
+			currentPlayerIndex.value = newCurrentPlayerIndex;
+			
+			await syncGameState();
+		} catch (error) {
+			console.error("Failed to join room:", error);
+			throw error;
+		}
+	}
+
+	async function startGame() {
+		if (!roomId.value || players.value.length < 2) return;
+		
+		gameStarted.value = true;
+
+		engineService.createNewGame(players.value);
+		const gameState = engineService.getGameState();
+
+		const { mutate: initializeGame } = useInitializeGameMutation();
+
+		const params = {
+			roomId: roomId.value,
+			players: players.value,
+			currentPlayerIndex: currentPlayerIndex.value,
+			deckCards: gameState.deck.cards,
+			discardPileCards: gameState.discardPile.cards,
+		};
+
+		engineService.onEnd = () => {
+			const query: Record<string, string | number> = {};
+			players.value.forEach((player) => {
+				query[player.name] = engineService.getPlayerScore(player.index) ?? 0;
+			});
+			router.push({ path: "/over", query });
+
+			//TODO: Handle end of game
+		};
+
+		await initializeGame({ gameInput: toGraphQLInitialGameInput(params) });
+	}
+
+	async function createRoom(playerId: string) {
+		try {
+			const result = await createRoomMutation({
+				playerId
+			});
+			const room = result?.data?.createRoom;
+			
+			if (!room) {
+				throw new Error("Failed to create room");
+			}
+			
+			// Update local state
+			const { players: extendedPlayers, currentPlayerIndex: newCurrentPlayerIndex } = fromGraphQLRoom({
+				players: room.players ?? [], 
+				currentPlayerId: room.currentPlayer?.id
+			});
+			
+			players.value = extendedPlayers;
+			currentPlayerIndex.value = newCurrentPlayerIndex;
+			
+			await syncGameState();
+			
+			return room.id;
+		} catch (error) {
+			console.error("Failed to create room:", error);
+			throw error;
+		}
+	}
+
+	function discardPileTopCard() {
+		return engineService.game.hand?.discardPile().top();
+	}
+
 	return {
-		createGame,
+		startGame,
+		createRoom,
+		joinRoom: joinGameRoom,
+		subscribeToRoomUpdates,
+		unsubscribeFromRoom,
+
+		updateAllPlayerDecks,
+
 		getPlayerScore,
 		isPlayerInTurn,
 		currentPlayerInTurn,
@@ -137,10 +306,11 @@ export const useGameStore = defineStore("game", () => {
 		draw,
 		sayUno,
 		catchUnoFailure,
-		updateAllPlayerDecks,
 		getTargetScore,
-		discardPileTopCard: engineService.getDiscardPileTopCard,
+
+		discardPileTopCard,
 		players,
-		bots,
+		gameStarted,
+		MAX_PLAYERS,
 	};
 });
