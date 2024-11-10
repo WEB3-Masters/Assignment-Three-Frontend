@@ -76,13 +76,12 @@ async function joinGame(roomId: string) {
 
 <style scoped>
 h1 {
-  font-size: 2.5rem;
-  color: #61dafb;
-  text-align: center;
-  margin-bottom: 2rem;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
-  position: relative;
-  z-index: 1;
+  font-size: 2.8rem;
+  margin-bottom: 2.5rem;
+  background: linear-gradient(45deg, #61dafb, #21a1f1);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: none;
 }
 
 .uno-game-setup {
@@ -90,13 +89,13 @@ h1 {
   flex-direction: column;
   align-items: center;
   padding: 2rem;
-  height: 100vh;
+  min-height: 100vh;
   background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
 }
 
 .game-container {
   width: 100%;
-  max-width: 800px;
+  max-width: 900px;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -105,10 +104,11 @@ h1 {
 
 .game-component {
   width: 100%;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
+  height: calc(100vh - 250px);
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 16px;
   padding: 2rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
@@ -117,18 +117,19 @@ h1 {
 
 .create-room-btn {
   flex-shrink: 0;
-  width: 100%;
-  padding: 1rem;
-  margin-bottom: 1.5rem;
   background: linear-gradient(45deg, #4CAF50, #45a049);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 1.2rem;
-  font-weight: 600;
-  transition: all 0.3s ease;
+  padding: 1.2rem;
+  margin-bottom: 2rem;
+  border-radius: 12px;
+  font-size: 1.3rem;
+  letter-spacing: 0.5px;
   box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+}
+
+.create-room-btn:disabled {
+  background: linear-gradient(45deg, #666, #555);
+  cursor: not-allowed;
+  opacity: 0.7;
 }
 
 .create-room-btn:hover {

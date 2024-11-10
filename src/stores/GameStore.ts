@@ -52,8 +52,8 @@ export const useGameStore = defineStore("game", () => {
 				gameStarted.value = true;
 			}
 
-			updateAllPlayerDecks();
 			engineService.updateFromRoom(room);
+			updateAllPlayerDecks();
 		});
 
 		onError((error) => {
@@ -77,7 +77,7 @@ export const useGameStore = defineStore("game", () => {
 		const params = {
 			roomId: roomId.value,
 			players: players.value,
-			currentPlayerIndex: currentPlayerIndex.value - 1,
+			currentPlayerIndex: currentPlayerIndex.value - 1, //-1 because graphql is 0-indexed
 			deckCards: gameState.deck.cards,
 			deckId: gameState.deck.id,
 			discardPileCards: gameState.discardPile.cards,
@@ -99,12 +99,17 @@ export const useGameStore = defineStore("game", () => {
 
 	async function play(cardIndex: number, nextColor?: CardColor) {
 		try {
+			if (!gameStarted.value) {
+				throw new Error("Game hasn't started yet");
+			}
+			
 			engineService.play(cardIndex, nextColor);
 			updateAllPlayerDecks();
 			nextTurn();
 			await syncGameState();
-		} catch {
-			alert("Illegal card play");
+		} catch (error) {
+			console.error("Error playing card:", error);
+			alert(error instanceof Error ? error.message : "Illegal card play");
 		}
 	}
 

@@ -1,7 +1,7 @@
 <template>
   <div class="gameplay">
-    <!-- Pause Button -->
-    <div class="pause-button-container">
+    <!-- Pause Button - Only show when game is started -->
+    <div v-if="store.gameStarted" class="pause-button-container">
       <button class="pause-button" @click="navigateToBreakScreen">
         Pause
       </button>
@@ -167,6 +167,9 @@ onMounted(() => {
 
 onUnmounted(() => {
     store.unsubscribeFromRoom();
+    // Reset any game state if needed
+    drawnThisTurn.value = false;
+    winner.value = undefined;
 });
 </script>
 
