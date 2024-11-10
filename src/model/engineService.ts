@@ -69,7 +69,7 @@ export class EngineService {
 			if(!nextColor) throw new Error("Wild card needs a color");
 			card.color = nextColor;
 		}
-		this.discardPileTopCardRef.value = this.game.hand?.discardPile().top();
+		this.discardPileTopCardRef.value = card;
 		return card;
 	}
 	

@@ -103,10 +103,11 @@ export const useGameStore = defineStore("game", () => {
 				throw new Error("Game hasn't started yet");
 			}
 			
-			engineService.play(cardIndex, nextColor);
+			const playedCard = engineService.play(cardIndex, nextColor);
 			updateAllPlayerDecks();
 			nextTurn();
 			await syncGameState();
+			return playedCard;
 		} catch (error) {
 			console.error("Error playing card:", error);
 			alert(error instanceof Error ? error.message : "Illegal card play");
@@ -285,6 +286,10 @@ export const useGameStore = defineStore("game", () => {
 		}
 	}
 
+	function discardPileTopCard() {
+		return engineService.game.hand?.discardPile().top();
+	}
+
 	return {
 		startGame,
 		createRoom,
@@ -304,7 +309,7 @@ export const useGameStore = defineStore("game", () => {
 		catchUnoFailure,
 		getTargetScore,
 
-		discardPileTopCard: engineService.getDiscardPileTopCard,
+		discardPileTopCard,
 		players,
 		gameStarted,
 		MAX_PLAYERS,

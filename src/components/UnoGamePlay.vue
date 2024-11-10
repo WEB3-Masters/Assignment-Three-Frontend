@@ -72,14 +72,14 @@
           class="discard"
           :style="{
             backgroundColor:
-              store.discardPileTopCard?.color?.toUpperCase() || '#ccc',
+              store.discardPileTopCard()?.color?.toUpperCase() || '#ccc',
           }"
         >
-          <span class="discard-text"
-            >{{
-              store.discardPileTopCard?.type === "NUMBERED"
-                ? store.discardPileTopCard?.number
-                : store.discardPileTopCard?.type
+          <span class="discard-text">
+            {{
+              store.discardPileTopCard()?.type === "NUMBERED"
+                ? store.discardPileTopCard()?.number
+                : store.discardPileTopCard()?.type
             }}
           </span>
         </div>
@@ -171,6 +171,9 @@ onUnmounted(() => {
     drawnThisTurn.value = false;
     winner.value = undefined;
 });
+
+// Add this computed property
+const discardPileTopCard = computed(() => store.discardPileTopCard());
 </script>
 
 <style scoped lang="css">
