@@ -1,5 +1,12 @@
 <template>
   <div class="gameplay">
+    <!-- Pause Button -->
+    <div class="pause-button-container">
+      <button class="pause-button" @click="navigateToBreakScreen">
+        Pause
+      </button>
+    </div>
+
     <!-- Waiting Room -->
     <div v-if="!store.gameStarted" class="waiting-room">
       <h2>Waiting Room</h2>
@@ -84,8 +91,6 @@
       />
 
       <p v-if="winner">Player {{ winner + 1 }} wins the round!</p>
-
-      <button class="testBtn" @click="navigateToBreakScreen()">Break</button>
     </div>
   </div>
 </template>
@@ -243,16 +248,7 @@ button:hover {
 }
 
 .testBtn {
-  width: 50px;
-  height: 30px;
-  background-color: red;
-  border: 2px solid black;
-  border-radius: 10px;
-  text-align: center;
-}
-
-.testBtn:hover {
-  background-color: rgb(249, 171, 171);
+  display: none;
 }
 
 .inactive {
@@ -425,5 +421,41 @@ button[disabled]:hover::after {
   border-radius: 4px;
   font-size: 12px;
   white-space: nowrap;
+}
+
+/* Add new pause button styles */
+.pause-button-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 100;
+}
+
+.pause-button {
+  width: auto;
+  height: auto;
+  padding: 10px 20px;
+  background: rgba(0, 0, 0, 0.4);
+  color: #61dafb;
+  border: 2px solid #61dafb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(5px);
+  box-shadow: 0 0 15px rgba(97, 218, 251, 0.1);
+}
+
+.pause-button:hover {
+  background: rgba(97, 218, 251, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 0 20px rgba(97, 218, 251, 0.2);
+  color: #61dafb;
+}
+
+.pause-button:active {
+  transform: translateY(0);
+  box-shadow: 0 0 10px rgba(97, 218, 251, 0.1);
 }
 </style>
