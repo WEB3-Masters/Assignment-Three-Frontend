@@ -114,6 +114,17 @@ export class EngineService {
 			this.discardPileTopCardRef.value = fromGraphQLCard(room.discardPile.cards[room.discardPile.cards.length - 1]);
 		}
 
+		// Update each player's hand from the room state
+		room.players?.forEach((player, index) => {
+			if (player.cards) {
+				const localCards = fromGraphQLCards(player.cards);
+				if (this.game.hand) {
+					// Update the player's hand in the local game state
+					this.game.hand.updatePlayerHand(index, localCards);
+				}
+			}
+		});
+
 		//Cards in hands are updated in updateAllPlayerDecks function
 	}
 

@@ -90,6 +90,7 @@ export const useGameStore = defineStore("game", () => {
 		if(!gameState.hasEnded) {
 			console.log("Syncing game state - graphql", toGraphQLRoomInput(params));
 			await updateRoom(toGraphQLRoomInput(params));
+			updateAllPlayerDecks();
 		}
 		else{
 			//TODO: Handle end of game
@@ -107,6 +108,7 @@ export const useGameStore = defineStore("game", () => {
 			updateAllPlayerDecks();
 			nextTurn();
 			await syncGameState();
+			updateAllPlayerDecks();
 			return playedCard;
 		} catch (error) {
 			console.error("Error playing card:", error);
@@ -122,6 +124,7 @@ export const useGameStore = defineStore("game", () => {
 		engineService.draw();
 		updateAllPlayerDecks();
 		nextTurn();
+		syncGameState();
 	}
 
 	function getPlayerScore(index: number): number {
