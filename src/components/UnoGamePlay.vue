@@ -3,14 +3,7 @@
     <!-- Waiting Room -->
     <div v-if="!store.gameStarted" class="waiting-room">
       <h2>Waiting Room</h2>
-      <div class="players-list">
-        <h3>Players ({{ store.players.length }}/{{ store.MAX_PLAYERS }})</h3>
-        <ul>
-          <li v-for="player in store.players" :key="player.id">
-            {{ player.name }}
-          </li>
-        </ul>
-      </div>
+      <p class="player-count">Players: {{ store.players.length }}/{{ store.MAX_PLAYERS }}</p>
       <button 
         v-if="isHost"
         @click="store.startGame()"
@@ -24,45 +17,46 @@
       </p>
     </div>
 
+    <!-- Player List Bar -->
+    <div class="players-bar">
+      <div 
+        v-for="(player, index) in store.players" 
+        :key="player.id"
+        class="player-indicator"
+        :class="{
+          'current-turn': store.currentPlayerInTurn() === index + 1,
+          'you': player.id === playerId
+        }"
+      >
+        <div class="player-name">{{ player.name }}</div>
+        <div class="cards-count">Cards: {{ player.hand?.length || 0 }}</div>
+      </div>
+    </div>
+
+    
+
     <!-- Game UI -->
-    <div v-else>
+    <div v-if="store.gameStarted">
       <h1>UNO</h1>
       <p>Target score: {{ targetScore }}</p>
-      <p>
-        Current player:
-        {{ store.currentPlayerInTurn() }}
-      </p>
+      
       <button
         v-if="store.players[store.currentPlayerInTurn() - 1]?.hand?.length === 1"
-        @click="
-          () => {
-            // Assuming the accuser (you) is of index 0
-            store.catchUnoFailure({
-              accuser: 0,
-              accused: store.currentPlayerInTurn(),
-            });
-            store.updateAllPlayerDecks();
-          }
-        "
+        @click="handleAccuse"
+        :disabled="!isMyTurn"
       >
         Accuse
       </button>
-      <p class="message">
-        Discard Pile: {{ store.discardPileTopCard?.type }}
-        {{ store.discardPileTopCard?.color }}
-        {{ store.discardPileTopCard?.number }}
-      </p>
-
+      
       <div class="decks">
         <div class="card">
           <button
-            @click="
-              {
-                drawCard();
-              }
-            "
-            :disabled="drawnThisTurn"
-            :class="{ inactive: drawnThisTurn }"
+            @click="drawCard"
+            :disabled="!isMyTurn || drawnThisTurn"
+            :class="{ 
+              inactive: !isMyTurn || drawnThisTurn,
+              'not-your-turn': !isMyTurn 
+            }"
           >
             Draw Card
           </button>
@@ -86,7 +80,7 @@
 
       <PlayerHand
         :cards="store.players[playerIndex].hand"
-        :isActive="store.isPlayerInTurn(playerIndex)"
+        :isActive="isMyTurn"
       />
 
       <p v-if="winner">Player {{ winner + 1 }} wins the round!</p>
@@ -111,32 +105,45 @@ const isHost = computed(() => {
     return store.players[0]?.id === playerId;
 });
 
-const numPlayers = Number(route.query.numPlayers);
 const targetScore = store.getTargetScore();
-const players = Array.from({ length: numPlayers }, (_, i) => `Player ${i + 1}`);
 
-const currentPlayer = store.currentPlayerInTurn();
+let currentPlayer = store.currentPlayerInTurn();
 const winner = ref<number | undefined>(undefined);
 const drawnThisTurn = ref(false);
 const playerIndex = 0;
 
 //<---- Card behaviour ---->
-const cardsContainer = ref<HTMLDivElement | null>(null);
 
 watch(
-  () => store.currentPlayerInTurn(),
-  (newPlayer) => {
-    if (newPlayer !== currentPlayer) {
+  () => store,
+  (localStore) => {
+    if (localStore.currentPlayerInTurn() !== currentPlayer) {
       drawnThisTurn.value = false;
     }
   }
 );
 
+// Add computed property for checking if it's player's turn
+const isMyTurn = computed(() => {
+  const currentPlayerIndex = store.currentPlayerInTurn() - 1; // Convert to 0-based index
+  return store.players[currentPlayerIndex]?.id === playerId;
+});
+
+function handleAccuse() {
+  if (!isMyTurn.value) return;
+  
+  store.catchUnoFailure({
+    accuser: 0,
+    accused: store.currentPlayerInTurn(),
+  });
+  store.updateAllPlayerDecks();
+}
+
 function drawCard() {
-  if (!drawnThisTurn.value) {
-    store.draw();
-    drawnThisTurn.value = true;
-  }
+  if (!isMyTurn.value || drawnThisTurn.value) return;
+  
+  store.draw();
+  drawnThisTurn.value = true;
 }
 
 const router = useRouter();
@@ -259,24 +266,10 @@ button:hover {
     text-align: center;
 }
 
-.players-list {
-    margin: 20px auto;
-    max-width: 300px;
-    background: rgba(255, 255, 255, 0.1);
-    padding: 20px;
-    border-radius: 8px;
-}
-
-.players-list ul {
-    list-style: none;
-    padding: 0;
-}
-
-.players-list li {
-    padding: 8px;
-    margin: 4px 0;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 4px;
+.player-count {
+    color: #61dafb;
+    font-size: 1.1em;
+    margin: 10px 0;
 }
 
 .start-button {
@@ -285,10 +278,152 @@ button:hover {
     padding: 12px 24px;
     margin: 20px 0;
     font-size: 16px;
+    background: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.start-button:hover:not(:disabled) {
+    background: #45a049;
+    transform: translateY(-2px);
+}
+
+.start-button:disabled {
+    background: #cccccc;
+    cursor: not-allowed;
+    opacity: 0.7;
 }
 
 .waiting-message {
     color: #888;
     font-style: italic;
+    margin-top: 10px;
+}
+
+.players-bar {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  margin: 10px;
+  flex-wrap: wrap;
+}
+
+.player-indicator {
+  padding: 12px 24px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  text-align: center;
+  transition: all 0.3s ease;
+  min-width: 150px;
+  position: relative;
+}
+
+.player-indicator::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 6px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.player-indicator.current-turn {
+  background: rgba(97, 218, 251, 0.3);
+  border-color: #61dafb;
+  transform: scale(1.05);
+  box-shadow: 0 0 20px rgba(97, 218, 251, 0.3);
+}
+
+.player-indicator.current-turn::before {
+  opacity: 1;
+  animation: pulse 2s infinite;
+  border: 2px solid #61dafb;
+}
+
+.player-indicator.you::after {
+  content: '(YOU)';
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  background: gold;
+  color: black;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.7em;
+  font-weight: bold;
+}
+
+.player-name {
+  font-weight: bold;
+  color: #fff;
+  margin-bottom: 8px;
+  font-size: 1.1em;
+}
+
+.cards-count {
+  font-size: 0.9em;
+  color: #ccc;
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  display: inline-block;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.02);
+  }
+  100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+}
+
+.not-your-turn {
+  background-color: #444 !important;
+  border-color: #333 !important;
+  cursor: not-allowed !important;
+  opacity: 0.5;
+}
+
+.not-your-turn:hover {
+  background-color: #444 !important;
+  color: whitesmoke !important;
+  transform: none !important;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Add a tooltip style for disabled buttons */
+button[disabled]:hover::after {
+  content: "Not your turn";
+  position: absolute;
+  bottom: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
 }
 </style>

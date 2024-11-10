@@ -8,6 +8,11 @@ import { useRoomUpdatedSubscription, useUpdateRoomMutation, useJoinRoomMutation,
 import { CardColor } from "../model/deck";
 import { useInitializeGameMutation } from "../generated/graphql";
 import { useCreateRoomMutation } from "../generated/graphql";
+import { provideApolloClient } from '@vue/apollo-composable';
+import { apolloClient } from '../apollo'; // Make sure this path is correct
+
+// Provide the Apollo client at the store level
+provideApolloClient(apolloClient);
 
 export const useGameStore = defineStore("game", () => {
 	const players = ref<ExtendedPlayer[]>([]);
@@ -22,6 +27,7 @@ export const useGameStore = defineStore("game", () => {
 	const router = useRouter();
 
 	const { mutate: joinRoom } = useJoinRoomMutation();
+	const { mutate: createRoomMutation } = useCreateRoomMutation();
 
 	function subscribeToRoomUpdates(id: string) {
 		unsubscribeFromRoom();
@@ -41,9 +47,13 @@ export const useGameStore = defineStore("game", () => {
 
 			players.value = extendedPlayers;
 			currentPlayerIndex.value = newCurrentPlayerIndex;
-			
-			engineService.updateFromRoom(room);
+
+			if(room.roomState === RoomState.InProgress){
+				gameStarted.value = true;
+			}
+
 			updateAllPlayerDecks();
+			engineService.updateFromRoom(room);
 		});
 
 		onError((error) => {
@@ -67,15 +77,18 @@ export const useGameStore = defineStore("game", () => {
 		const params = {
 			roomId: roomId.value,
 			players: players.value,
-			currentPlayerIndex: currentPlayerIndex.value,
+			currentPlayerIndex: currentPlayerIndex.value - 1,
 			deckCards: gameState.deck.cards,
 			deckId: gameState.deck.id,
 			discardPileCards: gameState.discardPile.cards,
 			discardPileId: gameState.discardPile.id,
-			roomState: gameState.hasEnded ? RoomState.InProgress : null
+			roomState: gameState.hasEnded ? null : gameStarted.value ? RoomState.InProgress : RoomState.Waiting 
 		};
 
+		console.log("Syncing game params", gameState);
+
 		if(!gameState.hasEnded) {
+			console.log("Syncing game state - graphql", toGraphQLRoomInput(params));
 			await updateRoom(toGraphQLRoomInput(params));
 		}
 		else{
@@ -114,7 +127,7 @@ export const useGameStore = defineStore("game", () => {
 	}
 
 	function currentPlayerInTurn(): number {
-		return currentPlayerIndex.value+1;
+		return currentPlayerIndex.value + 1;
 	}
 
 	function sayUno(index: number) {
@@ -176,7 +189,7 @@ export const useGameStore = defineStore("game", () => {
 	}
 
 	async function nextTurn() {
-		currentPlayerIndex.value = engineService.getCurrentPlayer()?.index ?? 0;
+		currentPlayerIndex.value = (engineService.getCurrentPlayer()?.index ?? 0) + 1;
 		await syncGameState();
 		//checkForUnoFailure();
 	}
@@ -192,10 +205,14 @@ export const useGameStore = defineStore("game", () => {
 
 			subscribeToRoomUpdates(roomId);
 
-			const { players: extendedPlayers, currentPlayerIndex: newCurrentPlayerIndex } = fromGraphQLRoom({players: room.players ?? [], currentPlayerId: room.currentPlayer?.id});
+			const { players: extendedPlayers, currentPlayerIndex: newCurrentPlayerIndex } = fromGraphQLRoom({
+				players: room.players ?? [], 
+				currentPlayerId: room.currentPlayer?.id
+			});
+			
 			players.value = extendedPlayers;
 			currentPlayerIndex.value = newCurrentPlayerIndex;
-						
+			
 			await syncGameState();
 		} catch (error) {
 			console.error("Failed to join room:", error);
@@ -234,11 +251,11 @@ export const useGameStore = defineStore("game", () => {
 		await initializeGame({ gameInput: toGraphQLInitialGameInput(params) });
 	}
 
-	async function createRoom() {
-		const { mutate: createRoomMutation } = useCreateRoomMutation();
-		
+	async function createRoom(playerId: string) {
 		try {
-			const result = await createRoomMutation();
+			const result = await createRoomMutation({
+				playerId
+			});
 			const room = result?.data?.createRoom;
 			
 			if (!room) {

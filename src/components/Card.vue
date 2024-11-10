@@ -59,7 +59,9 @@ import ColorSelector from './ColorSelector.vue';
   }
   
   .card.playable {
-    border-color: rgb(2, 200, 255);
+    scale: 1.2;
+    margin-left: 10px;
+    margin-right: 10px;
   }
 
   .card.inactive {

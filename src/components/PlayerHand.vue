@@ -83,11 +83,31 @@ function isPlayable(index: number): boolean {
 .cards {
   display: flex;
   overflow-x: auto;
+  height: 200px;
   max-width: 100%;
   scroll-snap-type: x mandatory;
   scroll-behavior: smooth;
-  justify-content: start;
-  padding: 5px;
-  gap: 5px;
+  justify-content: flex-start;
+  padding: 20px;
+  gap: 10px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+.cards::-webkit-scrollbar {
+  height: 8px;
+}
+
+.cards::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.cards::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+.cards::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.5);
 }
 </style>

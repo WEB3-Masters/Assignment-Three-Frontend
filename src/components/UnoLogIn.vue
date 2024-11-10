@@ -81,7 +81,6 @@ import { ref } from 'vue';
 import { useLoginPlayerMutation, useRegisterPlayerMutation } from '../generated/graphql';
 
 const router = useRouter();
-const store = useGameStore();
 
 // Add refs for form inputs
 const loginUsername = ref('');

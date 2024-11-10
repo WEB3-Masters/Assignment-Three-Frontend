@@ -86,9 +86,11 @@ async function handleJoinRoom(roomId: string) {
 
 <style scoped>
 .game-list {
-    padding: 20px;
-    max-width: 800px;
-    margin: 0 auto;
+    width: 100%;
+    max-height: 600px;
+    display: flex;
+    flex-direction: column;
+    overflow-y: scroll;
 }
 
 h2 {
@@ -101,6 +103,25 @@ h2 {
     background: rgba(255, 255, 255, 0.1);
     border-radius: 8px;
     padding: 20px;
+    min-height: 0;
+}
+
+.rooms-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.rooms-container::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+
+.rooms-container::-webkit-scrollbar-thumb {
+    background: rgba(97, 218, 251, 0.5);
+    border-radius: 4px;
+}
+
+.rooms-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(97, 218, 251, 0.7);
 }
 
 .room-card {

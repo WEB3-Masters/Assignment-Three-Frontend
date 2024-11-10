@@ -2,7 +2,8 @@
   <div class="uno-game-setup">
     <div class="user-info">
       <span v-if="username" class="username">
-        Logged in as: {{ username }}
+        {{ username }}
+        <button @click="handleLogout" class="logout-btn">Logout</button>
       </span>
       <span v-else class="not-logged">
         Not logged in
@@ -33,27 +34,31 @@ const gameStore = useGameStore();
 const games = ref([]);
 const username = ref(localStorage.getItem('username'));
 
+function handleLogout() {
+  localStorage.removeItem('username');
+  localStorage.removeItem('playerId');
+  router.push('/');
+}
+
 async function createNewRoom() {
   try {
-    let playerId = localStorage.getItem('playerId');
+    const playerId = localStorage.getItem('playerId');
     if (!playerId) {
       alert('Please log in first');
       router.push('/');
       return;
     }
-    const roomId = await gameStore.createRoom();
-    if (roomId) {
-      await gameStore.joinRoom(roomId, playerId);
-      router.push(`/play/${roomId}`);
-    }
+    const roomId = await gameStore.createRoom(playerId);
+    router.push(`/game/${roomId}`);
   } catch (error) {
     console.error('Failed to create room:', error);
+    alert('Failed to create room. Please try again.');
   }
 }
 
 async function joinGame(roomId: string) {
   try {
-    let playerId = localStorage.getItem('playerId');
+    const playerId = localStorage.getItem('playerId');
     if (!playerId) {
       alert('Please log in first');
       router.push('/');
@@ -61,9 +66,10 @@ async function joinGame(roomId: string) {
     }
     
     await gameStore.joinRoom(roomId, playerId);
-    router.push(`/play/${roomId}`);
+    router.push(`/game/${roomId}`);
   } catch (error) {
     console.error('Failed to join room:', error);
+    alert('Failed to join room. Please try again.');
   }
 }
 </script>
@@ -75,6 +81,8 @@ h1 {
   text-align: center;
   margin-bottom: 2rem;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+  position: relative;
+  z-index: 1;
 }
 
 .uno-game-setup {
@@ -82,13 +90,17 @@ h1 {
   flex-direction: column;
   align-items: center;
   padding: 2rem;
-  min-height: 100vh;
+  height: 100vh;
   background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
 }
 
 .game-container {
   width: 100%;
   max-width: 800px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 2rem;
 }
 
 .game-component {
@@ -99,9 +111,12 @@ h1 {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
 }
 
 .create-room-btn {
+  flex-shrink: 0;
   width: 100%;
   padding: 1rem;
   margin-bottom: 1.5rem;
@@ -140,6 +155,10 @@ h1 {
   border-radius: 6px;
   backdrop-filter: blur(5px);
   border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 10;
 }
 
 .username {
@@ -151,10 +170,27 @@ h1 {
   color: #ff4444;
 }
 
+.logout-btn {
+  margin-left: 10px;
+  padding: 4px 8px;
+  background: #ff4444;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: background-color 0.3s;
+}
+
+.logout-btn:hover {
+  background: #ff2222;
+}
+
 /* Make sure the header has relative positioning to not conflict with absolute user-info */
 .header {
   position: relative;
   width: 100%;
   text-align: center;
+  margin-top: 3rem;
 }
 </style>

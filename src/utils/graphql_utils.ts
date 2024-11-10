@@ -1,5 +1,5 @@
 import { Card, Card as LocalCard, CardColor as LocalCardColor, CardType as LocalCardType } from "../model/deck";
-import { CardInput, CardColor, Room, Card as GraphQLCard, RoomState, Player } from "../generated/graphql";
+import { CardInput, CardColor, Card as GraphQLCard, RoomState, Player } from "../generated/graphql";
 import { CardType } from "../generated/graphql";
 
 export interface ExtendedPlayer extends Pick<Player, 'id' | 'room'> {
@@ -11,7 +11,7 @@ export interface ExtendedPlayer extends Pick<Player, 'id' | 'room'> {
 // Convert local card type to GraphQL input type
 export function toGraphQLCard(card: LocalCard): CardInput {
     return {
-        id: card.id ?? Math.random().toString(),
+        id: card.id ?? new Error("Card id is required").message,
         type: toGraphQLCardType(card.type),
         color: card.color ? toGraphQLCardColor(card.color) : null,
         number: card.number ?? null
@@ -70,6 +70,7 @@ export function toGraphQLRoomInput(params: {
 }) {
     const { roomId, players, currentPlayerIndex, deckCards, discardPileCards, deckId, discardPileId, roomState } = params;
     
+    console.log("Current player index", currentPlayerIndex, players[currentPlayerIndex], players);
     return {
         room: {
             id: roomId,

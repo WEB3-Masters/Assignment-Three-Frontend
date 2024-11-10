@@ -73,8 +73,8 @@ export class EngineService {
 		return card;
 	}
 	
-	canPlay(cardIndex: number): boolean | undefined {
-		return this.game.hand?.canPlay(cardIndex);
+	canPlay(index: number): boolean | undefined {
+		return this.game.hand?.canPlay(index);
 	}
 	
 	draw(): void {
