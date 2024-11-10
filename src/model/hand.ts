@@ -316,13 +316,6 @@ export class Hand {
     else return ((playerIndex ?? this._playerInTurn) + 1 + range) % range;
   }
 
-  updatePlayerHand(playerIndex: number, cards: Card[]) {
-    if (playerIndex < 0 || playerIndex >= this.playerHands.length) {
-        throw new Error("Player index out of bounds");
-    }
-    this.playerHands[playerIndex] = [...cards];
-  }
-
   private shuffle() {
     if (this.shuffler) this._drawPile.shuffle(this.shuffler);
     else this._drawPile.shuffle(standardShuffler);
@@ -380,6 +373,13 @@ export class Hand {
     }));
     this._discardPile = new deck.Deck(localCards);
     this._discardPileId = id;
+  }
+
+  updatePlayerHand(playerIndex: number, cards: Card[]) {
+    if (playerIndex < 0 || playerIndex >= this.playerHands.length) {
+        throw new Error("Player index out of bounds");
+    }
+    this.playerHands[playerIndex] = [...cards];
   }
 }
 
